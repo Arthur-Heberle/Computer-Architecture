@@ -130,7 +130,8 @@ architecture a_processador6 of processador6 is
 
 begin
 
-    cte_ext_s <= "00000000000" & ir_out_s(4 downto 0);
+    cte_ext_s <= "11111111111" & ir_out_s(4 downto 0) when ir_out_s(4) = '1'
+                 else "00000000000" & ir_out_s(4 downto 0);
 
     ir_in_s   <= (others => '0') when flush_s = '1' else rom_out_s;
 

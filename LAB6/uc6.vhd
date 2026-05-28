@@ -83,10 +83,10 @@ begin
 
     is_any_branch_s <= is_jmp_s or is_ble_s or is_bcc_s;
 
-    -- flush quando qualquer desvio executar
-    -- JMP sempre toma; branches so quando flag ativa
-    flush_o <= '1' when (estado_s = "10" and is_jmp_s = '1') else
-               '1' when (estado_s = "10" and branch_taken_s = '1') else
+    -- flush ativo em estado=00 APOS o desvio executar (IR ainda contem o opcode
+    -- do desvio nesse ciclo, e wr_en_ir=1, entao ir_in=0 grava o NOP corretamente)
+    flush_o <= '1' when (estado_s = "00" and is_jmp_s = '1') else
+               '1' when (estado_s = "00" and branch_taken_s = '1') else
                '0';
 
     wr_en_ir_o <= '1' when estado_s = "00" else '0';
@@ -97,9 +97,11 @@ begin
                   '1' when (estado_s = "10" and branch_taken_s = '1') else
                   '0';
 
-    pc_next_o <= (pc_i + 1)        when estado_s = "01" else
-                 (pc_i + offset_s) when (estado_s = "10" and is_jmp_s = '1') else
-                 addr_abs_s        when (estado_s = "10" and branch_taken_s = '1') else
+    -- target-1: compensa a bolha NOP inserida pelo flush em estado=00,
+    -- cujo ciclo de decode (estado=01) incrementa PC em +1, entregando target correto.
+    pc_next_o <= (pc_i + 1)            when estado_s = "01" else
+                 (pc_i + offset_s - 1) when (estado_s = "10" and is_jmp_s = '1') else
+                 (addr_abs_s - 1)      when (estado_s = "10" and branch_taken_s = '1') else
                  pc_i;
 
     -- flags atualizadas apenas em instrucoes aritmeticas

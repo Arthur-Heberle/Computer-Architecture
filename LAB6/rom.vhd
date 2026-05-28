@@ -22,9 +22,10 @@ use ieee.numeric_std.all;
 --   end 1: LD   R4, 0
 --   end 2: ADD  R4, R3, R4       (passo C, alvo do loop)
 --   end 3: SUBI R3, R3, -1       (passo D: R3 = R3+1, seta flags)
---   end 4: SUBI R0, R3, 30       (compara R3 com 30, seta BLE)
---   end 5: BLE  2                (passo E: se R3<=30, volta para end 2)
---   end 6: MOV  R5, R4           (passo F: R5 = R4)
+--   end 4: SUBI R0, R3, 15       (compara R3 com 30 em dois passos)
+--   end 5: SUBI R0, R0, 15       (R0 = R3-30, seta BLE)
+--   end 6: BLE  2                (passo E: se R3<=30, volta para end 2)
+--   end 7: MOV  R5, R4           (passo F: R5 = R4)
 
 entity rom is
     port(
@@ -43,9 +44,10 @@ architecture a_rom of rom is
         1 => "000110000000000",  -- LD R4, 0
         2 => "001010001110000",  -- ADD R4, R3, R4
         3 => "001101101111111",  -- SUBI R3, R3, -1  (R3 = R3+1)
-        4 => "001100001111110",  -- SUBI R0, R3, 30  (seta flags)
-        5 => "010100000000010",  -- BLE 2
-        6 => "010010110000000",  -- MOV R5, R4
+        4 => "001100001101111",  -- SUBI R0, R3, 15  (R0 = R3-15)
+        5 => "001100000001111",  -- SUBI R0, R0, 15  (R0 = R3-30, seta flags)
+        6 => "010100000000010",  -- BLE 2
+        7 => "010010110000000",  -- MOV R5, R4
         others => (others => '0')
     );
 
