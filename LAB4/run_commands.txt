@@ -1,0 +1,10 @@
+ghdl -a flop_t.vhd
+ghdl -a pc.vhd
+ghdl -a ir.vhd
+ghdl -a rom.vhd
+ghdl -a uc.vhd
+ghdl -a top_level_uc.vhd
+ghdl -a top_level_uc_tb.vhd
+ghdl -e top_level_uc_tb
+ghdl -r top_level_uc_tb --wave=result_uc.ghw
+gtkwave result_uc.ghw

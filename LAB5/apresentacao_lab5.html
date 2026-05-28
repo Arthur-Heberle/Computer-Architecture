@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAB5 – µProcessador "Calculadora Programável"</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --bg2:      #1a1d2e;
+    --bg3:      #242740;
+    --accent:   #6c8eff;
+    --accent2:  #ff7eb3;
+    --accent3:  #4ecca3;
+    --accent4:  #ffd166;
+    --accent5:  #ff6b6b;
+    --text:     #e8eaf6;
+    --subtext:  #9fa8da;
+    --border:   #2e3256;
+    --code-bg:  #141824;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  a { color: var(--accent); }
+
+  /* ── Layout ── */
+  .page { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    padding: 60px 20px 50px;
+    background: linear-gradient(160deg, #1a1d2e 0%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .hero h1 { font-size: 2.6rem; font-weight: 800; line-height: 1.2; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--subtext); margin-top: 14px; font-size: 1.05rem; }
+
+  /* ── Sections ── */
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--accent);
+    border-left: 4px solid var(--accent);
+    padding-left: 14px;
+    margin: 52px 0 22px;
+  }
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent4);
+    margin: 28px 0 12px;
+  }
+  p { margin-bottom: 12px; color: #c5cae9; }
+
+  /* ── Cards ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 22px 18px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card .tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+  .tag-rom   { background: #1a2744; color: #6c8eff; }
+  .tag-reg   { background: #1a2e2e; color: #4ecca3; }
+  .tag-ctrl  { background: #2e1a2e; color: #ff7eb3; }
+  .tag-top   { background: #2e2a1a; color: #ffd166; }
+  .tag-alu   { background: #2e1a1a; color: #ff6b6b; }
+  .tag-tb    { background: #1a2229; color: #80cbc4; }
+  .card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .card p  { font-size: .88rem; color: var(--subtext); margin: 0; }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-size: .82rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    line-height: 1.6;
+    margin: 14px 0;
+  }
+  .kw  { color: #7986cb; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .str { color: #4ecca3; }
+  .num { color: #ffd166; }
+  .sig { color: #ff7eb3; }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    margin: 16px 0;
+  }
+  th {
+    background: var(--bg3);
+    color: var(--accent);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: .8rem;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--accent);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: #c5cae9;
+    vertical-align: top;
+  }
+  tr:hover td { background: var(--bg3); }
+  .mono { font-family: monospace; font-size: .92em; }
+  .badge-ok  { background:#1b3a1b; color:#4ecca3; padding:2px 8px; border-radius:10px; font-size:.78rem; font-weight:700; }
+  .badge-bug { background:#3a1b1b; color:#ff6b6b; padding:2px 8px; border-radius:10px; font-size:.78rem; font-weight:700; }
+  .badge-fix { background:#3a2e1a; color:#ffd166; padding:2px 8px; border-radius:10px; font-size:.78rem; font-weight:700; }
+
+  /* ── SVG Diagrams ── */
+  svg text { font-family: 'Segoe UI', system-ui, sans-serif; }
+  .diagram-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+
+  /* ── Timing diagram ── */
+  .timing {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: monospace;
+    font-size: .82rem;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text);
+    line-height: 1.8;
+  }
+  .t-label { color: var(--subtext); }
+  .t-ok    { color: var(--accent3); }
+  .t-bad   { color: var(--accent5); }
+  .t-fix   { color: var(--accent4); }
+
+  /* ── Bug / Fix panels ── */
+  .panel {
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    border-left: 5px solid;
+  }
+  .panel-bug { background: #1e1212; border-color: #ff6b6b; }
+  .panel-fix { background: #12201a; border-color: #4ecca3; }
+  .panel-info{ background: #131a2e; border-color: #6c8eff; }
+  .panel h4  { font-size: .95rem; font-weight: 700; margin-bottom: 10px; }
+  .panel-bug h4 { color: #ff6b6b; }
+  .panel-fix h4 { color: #4ecca3; }
+  .panel-info h4 { color: #6c8eff; }
+  .panel p   { font-size: .88rem; color: var(--subtext); }
+
+  /* ── Step list ── */
+  .steps { list-style: none; margin: 16px 0; }
+  .steps li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+    color: #c5cae9;
+  }
+  .steps li:last-child { border: none; }
+  .step-num {
+    min-width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: .78rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-letter {
+    min-width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--bg3);
+    color: var(--accent4);
+    font-weight: 700;
+    font-size: .8rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--accent4);
+  }
+
+  /* ── Instruction format ── */
+  .instr-bits {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: monospace;
+    font-size: .82rem;
+    margin: 14px 0;
+  }
+  .bit-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 2px solid var(--bg);
+    flex: 1;
+  }
+  .bit-group:last-child { border-right: none; }
+  .bit-top {
+    width: 100%;
+    text-align: center;
+    padding: 6px 4px;
+    font-weight: 700;
+    font-size: .75rem;
+  }
+  .bit-bot {
+    width: 100%;
+    text-align: center;
+    padding: 4px 4px;
+    font-size: .7rem;
+    color: var(--subtext);
+    background: var(--bg2);
+  }
+  .bg-op    { background: #1a2744; color: #6c8eff; }
+  .bg-rd    { background: #1a2e28; color: #4ecca3; }
+  .bg-rs1   { background: #2e281a; color: #ffd166; }
+  .bg-rs2   { background: #2e1a2e; color: #ff7eb3; }
+  .bg-cte   { background: #2e1e1a; color: #ff9f7e; }
+  .bg-off   { background: #1a1e2e; color: #b0bec5; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--subtext);
+    font-size: .82rem;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────────────────────── HERO ─────────────────────────── -->
+<div class="hero">
+  <div class="badge">UTFPR · Arquitetura de Computadores</div>
+  <h1>µProcessador 5 — <span>"Calculadora Programável"</span></h1>
+  <p>Explicação completa do LAB5: arquitetura, componentes, ISA, bug do JMP e correção.</p>
+</div>
+
+<div class="page">
+
+<!-- ─────────────────────── VISÃO GERAL ─────────────────────── -->
+<h2>1 · Visão Geral</h2>
+<p>
+  O LAB5 implementa um <strong>processador completo em VHDL</strong> com ROM síncrona, PC, banco de
+  8 registradores de 16 bits, ULA e unidade de controle. O processador executa um programa
+  de teste que soma repetidamente R3+R4 em R5, subtrai 1 e desvia para um loop — produzindo
+  a sequência <strong>12, 19, 26, 33, 40, 47…</strong>
+</p>
+
+<!-- Diagrama de blocos geral -->
+<div class="diagram-wrap">
+  <svg viewBox="0 0 900 430" width="100%" style="max-width:900px; display:block; margin:auto;">
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#6c8eff"/>
+      </marker>
+      <marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#4ecca3"/>
+      </marker>
+      <marker id="arr3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ffd166"/>
+      </marker>
+    </defs>
+
+    <!-- ROM -->
+    <rect x="30" y="160" width="120" height="60" rx="8" fill="#1a2744" stroke="#6c8eff" stroke-width="1.5"/>
+    <text x="90" y="186" text-anchor="middle" fill="#6c8eff" font-size="13" font-weight="bold">rom.vhd</text>
+    <text x="90" y="205" text-anchor="middle" fill="#9fa8da" font-size="10">ROM Síncrona</text>
+    <text x="90" y="217" text-anchor="middle" fill="#9fa8da" font-size="10">128×15 bits</text>
+
+    <!-- PC -->
+    <rect x="30" y="50" width="120" height="60" rx="8" fill="#1a2e28" stroke="#4ecca3" stroke-width="1.5"/>
+    <text x="90" y="76" text-anchor="middle" fill="#4ecca3" font-size="13" font-weight="bold">pc.vhd</text>
+    <text x="90" y="95" text-anchor="middle" fill="#9fa8da" font-size="10">Contador de</text>
+    <text x="90" y="107" text-anchor="middle" fill="#9fa8da" font-size="10">Programa 7 bits</text>
+
+    <!-- Seta PC → ROM -->
+    <line x1="90" y1="110" x2="90" y2="160" stroke="#4ecca3" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <text x="96" y="140" fill="#4ecca3" font-size="9">endereço</text>
+
+    <!-- IR -->
+    <rect x="210" y="160" width="120" height="60" rx="8" fill="#2e1a2e" stroke="#ff7eb3" stroke-width="1.5"/>
+    <text x="270" y="186" text-anchor="middle" fill="#ff7eb3" font-size="13" font-weight="bold">ir.vhd</text>
+    <text x="270" y="205" text-anchor="middle" fill="#9fa8da" font-size="10">Registrador de</text>
+    <text x="270" y="217" text-anchor="middle" fill="#9fa8da" font-size="10">Instrução 15 bits</text>
+
+    <!-- Mux flush (processador.vhd) -->
+    <rect x="155" y="172" width="50" height="36" rx="6" fill="#242740" stroke="#ffd166" stroke-width="1.2"/>
+    <text x="180" y="188" text-anchor="middle" fill="#ffd166" font-size="8.5" font-weight="bold">MUX</text>
+    <text x="180" y="200" text-anchor="middle" fill="#ffd166" font-size="8">flush</text>
+
+    <!-- ROM → MUX -->
+    <line x1="150" y1="190" x2="155" y2="190" stroke="#6c8eff" stroke-width="1.5" marker-end="url(#arr)"/>
+    <!-- MUX → IR -->
+    <line x1="205" y1="190" x2="210" y2="190" stroke="#6c8eff" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="157" y="165" fill="#9fa8da" font-size="8">dado</text>
+
+    <!-- UC5 -->
+    <rect x="390" y="140" width="160" height="110" rx="8" fill="#1a1e2e" stroke="#b0bec5" stroke-width="1.5"/>
+    <text x="470" y="164" text-anchor="middle" fill="#b0bec5" font-size="13" font-weight="bold">uc5.vhd</text>
+    <text x="470" y="182" text-anchor="middle" fill="#9fa8da" font-size="9.5">Unidade de Controle</text>
+    <text x="470" y="197" text-anchor="middle" fill="#9fa8da" font-size="9">decodifica opcode</text>
+    <text x="470" y="210" text-anchor="middle" fill="#9fa8da" font-size="9">gera wr_en_ir, wr_en_pc</text>
+    <text x="470" y="223" text-anchor="middle" fill="#9fa8da" font-size="9">wr_en_reg, flush, sel_*</text>
+    <text x="470" y="236" text-anchor="middle" fill="#9fa8da" font-size="9">pc_next, ula_op</text>
+
+    <!-- Estado -->
+    <rect x="390" y="290" width="160" height="55" rx="8" fill="#131a24" stroke="#607d8b" stroke-width="1.2"/>
+    <text x="470" y="314" text-anchor="middle" fill="#90a4ae" font-size="12" font-weight="bold">maq_estados.vhd</text>
+    <text x="470" y="332" text-anchor="middle" fill="#607d8b" font-size="9.5">Contador 00→01→10→00</text>
+
+    <!-- IR → UC5 -->
+    <line x1="330" y1="190" x2="390" y2="190" stroke="#ff7eb3" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="340" y="183" fill="#ff7eb3" font-size="9">instr[14:0]</text>
+
+    <!-- UC5 → PC (wr_en_pc, pc_next) -->
+    <path d="M 390 155 Q 280 100 150 80" fill="none" stroke="#4ecca3" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr2)"/>
+    <text x="270" y="110" fill="#4ecca3" font-size="8.5">pc_next / wr_en_pc</text>
+
+    <!-- UC5 → IR (wr_en_ir, flush) -->
+    <path d="M 390 175 Q 360 270 280 250 Q 260 230 270 220" fill="none" stroke="#ffd166" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr3)"/>
+    <text x="310" y="270" fill="#ffd166" font-size="8">wr_en_ir / flush</text>
+
+    <!-- Estado → UC5 -->
+    <line x1="470" y1="290" x2="470" y2="250" stroke="#607d8b" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="476" y="278" fill="#607d8b" font-size="8.5">estado[1:0]</text>
+
+    <!-- Banco de Regs -->
+    <rect x="620" y="100" width="140" height="65" rx="8" fill="#2e1a1a" stroke="#ff6b6b" stroke-width="1.5"/>
+    <text x="690" y="124" text-anchor="middle" fill="#ff6b6b" font-size="13" font-weight="bold">banco_regs.vhd</text>
+    <text x="690" y="142" text-anchor="middle" fill="#9fa8da" font-size="9.5">8 registradores × 16 bits</text>
+    <text x="690" y="156" text-anchor="middle" fill="#9fa8da" font-size="9">R0…R7</text>
+
+    <!-- ULA -->
+    <rect x="620" y="210" width="140" height="65" rx="8" fill="#1e1a2e" stroke="#ce93d8" stroke-width="1.5"/>
+    <text x="690" y="236" text-anchor="middle" fill="#ce93d8" font-size="13" font-weight="bold">ULA.vhd</text>
+    <text x="690" y="254" text-anchor="middle" fill="#9fa8da" font-size="9.5">ADD / SUB / AND / OR</text>
+    <text x="690" y="268" text-anchor="middle" fill="#9fa8da" font-size="9">16 bits, flags C Z N V</text>
+
+    <!-- UC5 → Banco (controles) -->
+    <line x1="550" y1="165" x2="620" y2="140" stroke="#ff6b6b" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+    <text x="558" y="145" fill="#ff6b6b" font-size="8">wr_en_reg</text>
+    <text x="558" y="156" fill="#ff6b6b" font-size="8">reg_wr/r1/r2</text>
+
+    <!-- Banco → ULA -->
+    <line x1="690" y1="165" x2="690" y2="210" stroke="#ce93d8" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="696" y="196" fill="#ce93d8" font-size="8.5">data_r1 / r2</text>
+
+    <!-- ULA → Banco (data_wr) -->
+    <path d="M 760 240 Q 800 200 800 140 Q 800 110 760 120" fill="none" stroke="#4ecca3" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <text x="806" y="185" fill="#4ecca3" font-size="8.5">ula_out</text>
+    <text x="806" y="197" fill="#4ecca3" font-size="8.5">→ data_wr</text>
+
+    <!-- UC5 → ULA (op) -->
+    <line x1="550" y1="210" x2="620" y2="240" stroke="#ce93d8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+    <text x="555" y="235" fill="#ce93d8" font-size="8">ula_op</text>
+
+    <!-- Legenda -->
+    <rect x="30" y="355" width="840" height="60" rx="6" fill="#131520" stroke="#2e3256" stroke-width="1"/>
+    <text x="50" y="375" fill="#9fa8da" font-size="10" font-weight="bold">LEGENDA:</text>
+    <line x1="120" y1="372" x2="155" y2="372" stroke="#6c8eff" stroke-width="2"/>
+    <text x="160" y="376" fill="#9fa8da" font-size="9">dados / instrução</text>
+    <line x1="260" y1="372" x2="295" y2="372" stroke="#4ecca3" stroke-width="2"/>
+    <text x="300" y="376" fill="#9fa8da" font-size="9">endereço / PC</text>
+    <line x1="390" y1="372" x2="425" y2="372" stroke="#ffd166" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="430" y="376" fill="#9fa8da" font-size="9">sinais de controle</text>
+    <line x1="545" y1="372" x2="580" y2="372" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="585" y="376" fill="#9fa8da" font-size="9">controles de reg</text>
+    <text x="50" y="400" fill="#607d8b" font-size="9">processador.vhd conecta todos os componentes acima (top-level)</text>
+    <text x="50" y="413" fill="#607d8b" font-size="9">reg16bits.vhd é o registrador primitivo de 16 bits usado pelo banco_regs e pelo PC/IR</text>
+  </svg>
+</div>
+
+<!-- ─────────────────────── COMPONENTES ─────────────────────── -->
+<h2>2 · O que cada arquivo faz</h2>
+<div class="cards">
+
+  <div class="card">
+    <span class="tag tag-top">top-level</span>
+    <h4>processador.vhd</h4>
+    <p>É o nível mais alto. Instancia e conecta todos os outros componentes.
+    Também contém o <strong>mux de flush</strong>: escolhe entre a saída da ROM
+    e zero (NOP forçado) antes de entrar no IR. Não tem lógica própria — apenas
+    ligações (port map) e sinais internos.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-rom">ROM</span>
+    <h4>rom.vhd</h4>
+    <p>Memória de programa síncrona, 128 posições × 15 bits. Captura o endereço
+    na borda de subida do clock e apresenta o dado <em>após</em> a borda — isso
+    introduz 1 ciclo de latência e é a raiz do bug do JMP.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-reg">Registrador</span>
+    <h4>pc.vhd</h4>
+    <p>Registrador de 7 bits com wr_en. Armazena o endereço da próxima instrução
+    a ser lida. É atualizado no estado 01 (decode) com PC+1, e no estado 10
+    (execute) quando a instrução for JMP.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-reg">Registrador</span>
+    <h4>ir.vhd</h4>
+    <p>Instruction Register — registrador de 15 bits. Guarda a instrução lida da
+    ROM enquanto ela está sendo decodificada e executada. O wr_en é ativado
+    <strong>apenas no estado 00 (fetch)</strong>. Entrada vem do mux de flush.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-ctrl">Controle</span>
+    <h4>uc5.vhd</h4>
+    <p>Unidade de controle — o cérebro do processador. Lê o opcode do IR e o
+    estado atual, e gera todos os sinais de controle: wr_en_pc, wr_en_ir, flush,
+    wr_en_reg, sel_wr, sel_b, ula_op, pc_next, reg_wr/r1/r2. Toda lógica é
+    combinacional (when-else).</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-ctrl">Controle</span>
+    <h4>maq_estados.vhd</h4>
+    <p>Máquina de estados simples — contador síncrono de 2 bits que conta
+    00 → 01 → 10 → 00 → … (fetch → decode → execute → fetch). Idêntico ao
+    código fornecido pelo professor.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-alu">Dados</span>
+    <h4>banco_regs.vhd</h4>
+    <p>Banco de 8 registradores de 16 bits (R0…R7). Usa um decodificador de
+    escrita (1-de-8) para selecionar qual registrador recebe data_wr. Possui
+    dois multiplexadores de leitura independentes (data_r1 e data_r2).</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-alu">Dados</span>
+    <h4>ULA.vhd</h4>
+    <p>Unidade Lógica e Aritmética de 16 bits. Suporta 4 operações selecionadas
+    por <em>op[1:0]</em>: 00=ADD, 01=SUB, 10=AND, 11=OR. Calcula flags C, Z, N, V,
+    BLE e BCC (somente ADD e SUB têm flags completos).</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-reg">Primitivo</span>
+    <h4>reg16bits.vhd</h4>
+    <p>Registrador síncrono de 16 bits com wr_en e reset. É o bloco básico
+    instanciado 8 vezes dentro do banco_regs (e também serve de base para o
+    pc.vhd e ir.vhd).</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-tb">Testbench</span>
+    <h4>processador_tb.vhd</h4>
+    <p>Testbench principal. Gera clock de 100 ns, aplica reset por 200 ns, e
+    simula por 30 µs. Contém dois processos de verificação: um que detecta
+    instruções espúrias e outro que confirma a sequência de R5 (12, 19, 26…).</p>
+  </div>
+
+</div>
+
+<!-- ─────────────────────── MÁQUINA DE ESTADOS ─────────────────────── -->
+<h2>3 · Máquina de 3 Estados</h2>
+<p>
+  Cada instrução leva exatamente <strong>3 ciclos de clock</strong> para ser executada.
+  O sinal <code>estado[1:0]</code> indica qual fase está ativa:
+</p>
+
+<div class="diagram-wrap">
+  <svg viewBox="0 0 760 220" width="100%" style="max-width:760px; display:block; margin:auto;">
+    <defs>
+      <marker id="a1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#6c8eff"/>
+      </marker>
+    </defs>
+
+    <!-- Estado 00 -->
+    <circle cx="130" cy="110" r="75" fill="#13203a" stroke="#6c8eff" stroke-width="2"/>
+    <text x="130" y="100" text-anchor="middle" fill="#6c8eff" font-size="20" font-weight="bold">00</text>
+    <text x="130" y="118" text-anchor="middle" fill="#9fa8da" font-size="11">FETCH</text>
+    <text x="130" y="133" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_ir = 1</text>
+    <text x="130" y="147" text-anchor="middle" fill="#607d8b" font-size="9.5">IR ← MUX(ROM, NOP)</text>
+
+    <!-- Estado 01 -->
+    <circle cx="380" cy="110" r="75" fill="#1e2a1e" stroke="#4ecca3" stroke-width="2"/>
+    <text x="380" y="100" text-anchor="middle" fill="#4ecca3" font-size="20" font-weight="bold">01</text>
+    <text x="380" y="118" text-anchor="middle" fill="#9fa8da" font-size="11">DECODE</text>
+    <text x="380" y="133" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_pc = 1</text>
+    <text x="380" y="147" text-anchor="middle" fill="#607d8b" font-size="9.5">PC ← PC + 1</text>
+
+    <!-- Estado 10 -->
+    <circle cx="630" cy="110" r="75" fill="#2a1e1e" stroke="#ff6b6b" stroke-width="2"/>
+    <text x="630" y="100" text-anchor="middle" fill="#ff6b6b" font-size="20" font-weight="bold">10</text>
+    <text x="630" y="118" text-anchor="middle" fill="#9fa8da" font-size="11">EXECUTE</text>
+    <text x="630" y="133" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_reg = 1 (se escrita)</text>
+    <text x="630" y="147" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_pc = 1 (se JMP)</text>
+
+    <!-- 00 → 01 -->
+    <line x1="205" y1="100" x2="305" y2="100" stroke="#6c8eff" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="255" y="92" text-anchor="middle" fill="#9fa8da" font-size="9">rising_edge</text>
+
+    <!-- 01 → 10 -->
+    <line x1="455" y1="100" x2="555" y2="100" stroke="#6c8eff" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="505" y="92" text-anchor="middle" fill="#9fa8da" font-size="9">rising_edge</text>
+
+    <!-- 10 → 00 (curva por baixo) -->
+    <path d="M 630 185 Q 630 210 380 210 Q 130 210 130 185" fill="none" stroke="#6c8eff" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="380" y="207" text-anchor="middle" fill="#9fa8da" font-size="9">rising_edge (volta ao início)</text>
+
+    <!-- RST → 00 -->
+    <line x1="50" y1="40" x2="90" y2="70" stroke="#ff6b6b" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a1)"/>
+    <text x="28" y="35" fill="#ff6b6b" font-size="9">rst=1</text>
+  </svg>
+</div>
+
+<h3>O que acontece em cada estado</h3>
+<table>
+  <tr>
+    <th>Estado</th><th>Nome</th><th>wr_en_ir</th><th>wr_en_pc</th><th>wr_en_reg</th><th>Ação principal</th>
+  </tr>
+  <tr>
+    <td><span class="mono" style="color:#6c8eff">00</span></td>
+    <td>Fetch</td>
+    <td><span class="badge-ok">1</span></td>
+    <td>0</td>
+    <td>0</td>
+    <td>IR captura a saída do mux (ROM ou NOP de flush). ROM já tem dado[PC] do ciclo anterior.</td>
+  </tr>
+  <tr>
+    <td><span class="mono" style="color:#4ecca3">01</span></td>
+    <td>Decode</td>
+    <td>0</td>
+    <td><span class="badge-ok">1</span></td>
+    <td>0</td>
+    <td>PC ← PC + 1 (sempre). IR é lido pela UC para decodificar a instrução.</td>
+  </tr>
+  <tr>
+    <td><span class="mono" style="color:#ff6b6b">10</span></td>
+    <td>Execute</td>
+    <td>0</td>
+    <td><span class="badge-ok">1</span> se JMP</td>
+    <td><span class="badge-ok">1</span> se escrita</td>
+    <td>ULA opera. Banco de regs grava resultado. JMP atualiza PC.</td>
+  </tr>
+</table>
+
+<!-- ─────────────────────── ISA ─────────────────────── -->
+<h2>4 · ISA – Conjunto de Instruções (15 bits)</h2>
+<p>Todas as instruções têm 15 bits. Os campos variam conforme a instrução:</p>
+
+<h3>Formato geral dos bits</h3>
+<div class="instr-bits">
+  <div class="bit-group">
+    <div class="bit-top bg-op">[14:11]</div>
+    <div class="bit-bot">opcode (4 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-rd">[10:8]</div>
+    <div class="bit-bot">Rd destino (3 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-rs1">[7:5]</div>
+    <div class="bit-bot">Rs1 fonte 1 (3 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-rs2">[4:2]</div>
+    <div class="bit-bot">Rs2 fonte 2 (3 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-cte">[4:0]</div>
+    <div class="bit-bot">cte5 (5 bits) — LD/SUBI</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-off">[10:0]</div>
+    <div class="bit-bot">offset11 — JMP (UC usa [6:0])</div>
+  </div>
+</div>
+
+<h3>Tabela de instruções</h3>
+<table>
+  <tr><th>Opcode [14:11]</th><th>Mnemônico</th><th>Operação</th><th>sel_wr</th><th>ula_op</th><th>Exemplo na ROM</th></tr>
+  <tr>
+    <td class="mono" style="color:#9fa8da">0000</td>
+    <td><strong>NOP</strong></td>
+    <td>Nada. Todos os wr_en = 0.</td>
+    <td>–</td><td>–</td>
+    <td class="mono">0x0000</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#6c8eff">0001</td>
+    <td><strong>LD Rd, cte5</strong></td>
+    <td>Rd ← cte5 (zero-extend para 16 bits)</td>
+    <td>01 (cte)</td><td>–</td>
+    <td class="mono">LD R3, 5 → 000101100000101</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#4ecca3">0010</td>
+    <td><strong>ADD Rd, Rs1, Rs2</strong></td>
+    <td>Rd ← Rs1 + Rs2</td>
+    <td>00 (ULA)</td><td>00 (add)</td>
+    <td class="mono">ADD R5,R3,R4 → 001010101110000</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ffd166">0011</td>
+    <td><strong>SUBI Rd, Rs1, cte5</strong></td>
+    <td>Rd ← Rs1 − cte5</td>
+    <td>00 (ULA)</td><td>01 (sub)</td>
+    <td class="mono">SUBI R5,R5,1 → 001110110100001</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ff7eb3">0100</td>
+    <td><strong>MOV Rd, Rs1</strong></td>
+    <td>Rd ← Rs1 (via data_r1)</td>
+    <td>10 (R1)</td><td>–</td>
+    <td class="mono">MOV R3,R5 → 010001110100000</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ff6b6b">1111</td>
+    <td><strong>JMP offset</strong></td>
+    <td>PC ← PC_execute + offset − 1<br><small style="color:#607d8b">(−1 compensa o ciclo de bolha)</small></td>
+    <td>–</td><td>–</td>
+    <td class="mono">JMP+15 → 111100000001111</td>
+  </tr>
+</table>
+
+<!-- ─────────────────────── PROGRAMA TESTE ─────────────────────── -->
+<h2>5 · Programa de Teste na ROM</h2>
+<p>O programa executa um loop infinito que produz a sequência <strong>12, 19, 26, 33…</strong> em R5:</p>
+
+<ul class="steps">
+  <li><span class="step-letter">A</span> <div><strong>end 0:</strong> <span class="mono">LD R3, 5</span> — carrega R3 com 5.</div></li>
+  <li><span class="step-letter">B</span> <div><strong>end 1:</strong> <span class="mono">LD R4, 8</span> — carrega R4 com 8.</div></li>
+  <li><span class="step-letter">C</span> <div><strong>end 2:</strong> <span class="mono">ADD R5, R3, R4</span> — R5 = R3+R4. Na 1ª vez: 5+8=13.</div></li>
+  <li><span class="step-letter">D</span> <div><strong>end 3:</strong> <span class="mono">SUBI R5, R5, 1</span> — R5 = R5−1. Na 1ª vez: 13−1=<strong>12</strong>.</div></li>
+  <li><span class="step-letter">E</span> <div><strong>end 4:</strong> <span class="mono">JMP +15</span> — salta para end 20. (end 5 nunca executa)</div></li>
+  <li><span class="step-letter">F</span> <div><strong>end 5:</strong> <span class="mono">LD R5, 0</span> — <em>nunca executada</em> (instrução proibida).</div></li>
+  <li><span class="step-letter">G</span> <div><strong>end 20:</strong> <span class="mono">MOV R3, R5</span> — R3 = R5 (ex: 12). Prepara próxima iteração.</div></li>
+  <li><span class="step-letter">H</span> <div><strong>end 21:</strong> <span class="mono">JMP −20</span> — volta para end 2 (ADD). (end 22 nunca executa)</div></li>
+  <li><span class="step-letter">I</span> <div><strong>end 22:</strong> <span class="mono">LD R3, 0</span> — <em>nunca executada</em>.</div></li>
+</ul>
+
+<h3>Cálculo dos offsets</h3>
+<div class="panel panel-info">
+  <h4>Como calcular offset do JMP?</h4>
+  <p>
+    Durante o execute do JMP, o PC já foi incrementado para <em>endereço_da_instrução + 1</em>
+    (isso aconteceu no decode). O offset usa <strong>7 bits em complemento de 2</strong>
+    (UC extrai <em>instr[6:0]</em>).
+  </p>
+  <p style="margin-top:8px;">
+    <strong>JMP em end 4, target 20:</strong> PC_execute = 5. offset = 20 − 5 = +15
+    → em 7 bits: <span class="mono">0001111</span> = 15 ✓<br>
+    <strong>JMP em end 21, target 2:</strong> PC_execute = 22. offset = 2 − 22 = −20
+    → em 7 bits comp2: <span class="mono">1101100</span> = 108 unsigned ✓
+  </p>
+</div>
+
+<h3>Tabela de codificação da ROM</h3>
+<table>
+  <tr><th>Endereço</th><th>Assembly</th><th>Binário (15 bits)</th><th>Executada?</th></tr>
+  <tr><td>0</td><td class="mono">LD R3, 5</td><td class="mono">000_1_011_00000_101</td><td><span class="badge-ok">Sim</span></td></tr>
+  <tr><td>1</td><td class="mono">LD R4, 8</td><td class="mono">000_1_100_00001_000</td><td><span class="badge-ok">Sim</span></td></tr>
+  <tr><td>2</td><td class="mono">ADD R5, R3, R4</td><td class="mono">0010_101_011_100_00</td><td><span class="badge-ok">Sim (loop)</span></td></tr>
+  <tr><td>3</td><td class="mono">SUBI R5, R5, 1</td><td class="mono">0011_101_101_00001</td><td><span class="badge-ok">Sim (loop)</span></td></tr>
+  <tr><td>4</td><td class="mono">JMP +15</td><td class="mono">1111_0000000_01111</td><td><span class="badge-ok">Sim (loop)</span></td></tr>
+  <tr><td>5</td><td class="mono">LD R5, 0</td><td class="mono">000_1_101_00000_000</td><td><span class="badge-bug">NUNCA</span></td></tr>
+  <tr><td>6–19</td><td class="mono">NOP</td><td class="mono">000_0000_0000_0000_0</td><td>–</td></tr>
+  <tr><td>20</td><td class="mono">MOV R3, R5</td><td class="mono">0100_011_101_00000</td><td><span class="badge-ok">Sim (loop)</span></td></tr>
+  <tr><td>21</td><td class="mono">JMP −20</td><td class="mono">1111_1111110_1100</td><td><span class="badge-ok">Sim (loop)</span></td></tr>
+  <tr><td>22</td><td class="mono">LD R3, 0</td><td class="mono">000_1_011_00000_000</td><td><span class="badge-bug">NUNCA</span></td></tr>
+</table>
+
+<!-- ─────────────────────── O BUG ─────────────────────── -->
+<h2>6 · O Bug do JMP — Diagnóstico Completo</h2>
+
+<div class="panel panel-bug">
+  <h4>⚠ Problema original (antes da correção)</h4>
+  <p>
+    A instrução espúria após o JMP (ex: <em>LD R5,0</em> no endereço 5) estava sendo
+    executada mesmo com o flush implementado. O resultado era que R5 era zerado,
+    quebrando o loop.
+  </p>
+</div>
+
+<h3>Por que a ROM síncrona cria o problema?</h3>
+<p>
+  A ROM é <strong>registrada</strong>: ela captura o endereço na borda de subida do clock
+  e apresenta o dado <em>depois</em> da borda (latência de 1 ciclo). Isso significa
+  que quando o JMP muda o PC para 20, a ROM ainda vai apresentar <strong>rom[5]</strong>
+  no ciclo seguinte — porque ela capturou o endereço <em>5</em> (PC antigo) antes da
+  atualização.
+</p>
+
+<h3>Por que o flush original não funcionava?</h3>
+<p>O flush original no <em>uc5.vhd</em> linha 70 era:</p>
+<pre><span class="cm">-- CÓDIGO COM BUG (linha 70 original)</span>
+<span class="sig">flush_o</span> <span class="kw">&lt;=</span> <span class="str">'1'</span> <span class="kw">when</span> (is_jmp_s = <span class="str">'1'</span> <span class="kw">and</span> estado_s = <span class="str">"10"</span>) <span class="kw">else</span> <span class="str">'0'</span>;</pre>
+
+<div class="panel panel-bug">
+  <h4>Erro 1 — Flush aplicado no ciclo errado (estado=10)</h4>
+  <p>
+    No estado 10 (execute), <strong>wr_en_ir = 0</strong>. O IR nunca escreve durante o execute.
+    Portanto, forçar zeros na entrada do IR nesse estado <strong>não tem nenhum efeito prático</strong>.
+    O flush era completamente inútil.
+  </p>
+</div>
+
+<div class="panel panel-bug">
+  <h4>Erro 2 — Flush desativado quando o IR vai gravar</h4>
+  <p>
+    Após o execute (10→00), o estado muda para 00 e <strong>wr_en_ir passa a 1</strong>.
+    Nesse momento, flush = 0 (condição estado=10 já é falsa), então ir_in_s = rom_out_s =
+    instrução espúria. O IR grava a instrução errada.
+  </p>
+</div>
+
+<h3>Diagrama de temporização do bug (JMP em addr=4, target=20)</h3>
+<div class="timing">
+<span class="t-label">                  Ciclo N-1          │  Ciclo N: JMP execute  │  Ciclo N+1: fetch    │  N+2: decode</span>
+<span class="t-label">Estado            01 → 10             │  10 → 00               │  00 → 01             │  01</span>
+─────────────────────────────────────────┼────────────────────────┼──────────────────────┼──────────────
+<span class="t-label">PC_antes_borda    4                      │  5                     │  20                  │  20</span>
+<span class="t-label">ROM captura addr  4                      │  5 ← PC ainda é 5!    │  20                  │  20</span>
+<span class="t-label">ROM saída (dado)  rom[4]=JMP+15          │</span><span class="t-bad">  rom[5]=LD R5,0 ESPÚRIO│</span><span class="t-ok">  rom[20]=MOV      </span><span class="t-label">    │</span>
+─────────────────────────────────────────┼────────────────────────┼──────────────────────┼──────────────
+<span class="t-label">flush (bug):      0                      │  1 (INÚTIL! wr_en=0)   │</span><span class="t-bad">  0 ← flush sumiu!    │  0</span>
+<span class="t-label">wr_en_ir          0                      │  0                     │</span><span class="t-bad">  1 ← IR VAI GRAVAR   │  0</span>
+<span class="t-label">ir_in_s           rom[4]                 │  0 (não importa)       │</span><span class="t-bad">  rom[5] ← ERRADO     │</span>
+─────────────────────────────────────────┼────────────────────────┼──────────────────────┼──────────────
+<span class="t-label">IR (após borda)   JMP+15                 │  JMP+15 (não mudou)    │</span><span class="t-bad">  LD R5,0 ← BUG!      │  LD R5,0</span>
+</div>
+
+<!-- ─────────────────────── A CORREÇÃO ─────────────────────── -->
+<h2>7 · A Correção — Duas Mudanças em uc5.vhd</h2>
+
+<div class="panel panel-fix">
+  <h4>✔ Solução encontrada</h4>
+  <p>
+    Mover o flush para o estado 00 (onde o IR de fato grava), e ajustar o target
+    do JMP para <em>target − 1</em> para compensar o ciclo de bolha NOP que o flush
+    introduz.
+  </p>
+</div>
+
+<h3>Mudança 1 — Mover flush para estado=00 (linha 70)</h3>
+<pre><span class="cm">-- ANTES (bug): flush em estado=10, mas wr_en_ir=0 lá → sem efeito</span>
+<span class="sig">flush_o</span> <span class="kw">&lt;=</span> <span class="str">'1'</span> <span class="kw">when</span> (is_jmp_s = <span class="str">'1'</span> <span class="kw">and</span> estado_s = <span class="str">"10"</span>) <span class="kw">else</span> <span class="str">'0'</span>;
+
+<span class="cm">-- DEPOIS (correto): flush em estado=00, onde wr_en_ir=1 e IR ainda tem JMP</span>
+<span class="sig">flush_o</span> <span class="kw">&lt;=</span> <span class="str">'1'</span> <span class="kw">when</span> (is_jmp_s = <span class="str">'1'</span> <span class="kw">and</span> estado_s = <span class="str">"00"</span>) <span class="kw">else</span> <span class="str">'0'</span>;</pre>
+
+<p>
+  <strong>Por que funciona?</strong> Após o execute do JMP, o IR ainda contém o opcode JMP
+  (não foi sobrescrito em estado=10, onde wr_en=0). Em estado=00, is_jmp=1 e estado=00
+  → flush=1 → ir_in_s=0 (NOP). O IR grava o NOP na próxima borda.
+</p>
+
+<h3>Mudança 2 — Ajustar target para target−1 (linhas 78–80)</h3>
+<pre><span class="cm">-- ANTES: JMP salta direto para o target</span>
+<span class="sig">pc_next_o</span> <span class="kw">&lt;=</span> (pc_i + <span class="num">1</span>)        <span class="kw">when</span> estado_s = <span class="str">"01"</span> <span class="kw">else</span>
+             (pc_i + offset_s) <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> is_jmp_s = <span class="str">'1'</span>) <span class="kw">else</span>
+             pc_i;
+
+<span class="cm">-- DEPOIS: JMP salta para target-1; o NOP de bolha em estado=01 incrementa +1 → target</span>
+<span class="sig">pc_next_o</span> <span class="kw">&lt;=</span> (pc_i + <span class="num">1</span>)            <span class="kw">when</span> estado_s = <span class="str">"01"</span> <span class="kw">else</span>
+             (pc_i + offset_s - <span class="num">1</span>) <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> is_jmp_s = <span class="str">'1'</span>) <span class="kw">else</span>
+             pc_i;</pre>
+
+<p>
+  <strong>Por que é necessário?</strong> O flush insere um NOP que passa por estado=01 (decode),
+  e nesse estado o PC sempre incrementa +1. Se o JMP saltasse direto para target=20,
+  depois do NOP o PC seria 21 — e a instrução em 20 seria pulada!
+  Saltando para 19, o NOP incrementa para 20 ✓.
+</p>
+
+<h3>Verificação dos offsets (constantes da ROM não mudam)</h3>
+<table>
+  <tr><th>JMP</th><th>Addr</th><th>PC_execute</th><th>offset (7-bit)</th><th>PC após execute (antes fix)</th><th>PC após execute (depois fix)</th><th>PC após bolha NOP</th></tr>
+  <tr>
+    <td class="mono">JMP +15</td><td>4</td><td>5</td><td>15</td>
+    <td class="mono" style="color:#ff6b6b">5+15=20</td>
+    <td class="mono" style="color:#ffd166">5+15−1=19</td>
+    <td class="mono" style="color:#4ecca3">19+1=<strong>20</strong> ✓</td>
+  </tr>
+  <tr>
+    <td class="mono">JMP −20</td><td>21</td><td>22</td><td>108 (= −20 mod 128)</td>
+    <td class="mono" style="color:#ff6b6b">22+108=2</td>
+    <td class="mono" style="color:#ffd166">22+108−1=1</td>
+    <td class="mono" style="color:#4ecca3">1+1=<strong>2</strong> ✓</td>
+  </tr>
+</table>
+
+<h3>Diagrama de temporização após a correção</h3>
+<div class="timing">
+<span class="t-label">                  Execute JMP (10→00)   │  Fetch pós-JMP (00→01) │  Decode bolha (01→10) │  Execute bolha (10→00) │  Fetch correto</span>
+─────────────────────────────────────────┼────────────────────────┼───────────────────────┼────────────────────────┼──────────────────
+<span class="t-label">PC (antes borda)  5                      │  19 (=target-1)        │  19                   │  20                    │  20</span>
+<span class="t-label">ROM captura addr  5                      │  19 (NOPs)             │  19                   │  20                    │  20</span>
+<span class="t-label">ROM saída (dado)  rom[5] espúrio         │  rom[19]=NOP           │  rom[19]=NOP          │</span><span class="t-ok">  rom[20]=MOV       </span><span class="t-label">    │</span><span class="t-ok"> rom[20]</span>
+─────────────────────────────────────────┼────────────────────────┼───────────────────────┼────────────────────────┼──────────────────
+<span class="t-fix">flush (novo):     0                      │  1 (is_jmp, estado=00) │  0                    │  0                     │  0</span>
+<span class="t-label">wr_en_ir          0                      │  1                     │  0                    │  0                     │  1</span>
+<span class="t-label">ir_in_s           rom[5] (ignorado)      │</span><span class="t-ok">  0 = NOP forçado       │</span><span class="t-label">  –                    │  –                     │</span><span class="t-ok"> rom[20]</span>
+─────────────────────────────────────────┼────────────────────────┼───────────────────────┼────────────────────────┼──────────────────
+<span class="t-label">IR (após borda)   JMP+15                 │</span><span class="t-ok">  NOP (bolha)           │  NOP                  │  NOP                   │</span><span class="t-ok"> MOV R3,R5 ✓</span>
+<span class="t-label">PC (após borda)   19                     │  19                    │  20 ✓                 │  20                    │  20</span>
+</div>
+
+<div class="panel panel-fix">
+  <h4>✔ Penalidade aceitável</h4>
+  <p>
+    Com ROM síncrona de 1 ciclo de latência, o ciclo de bolha é <strong>inevitável</strong>.
+    O processador perde 3 ciclos de clock a cada JMP (1 bolha × 3 estados).
+    As instruções marcadas como "nunca executadas" no programa continuam nunca executando. ✓
+  </p>
+</div>
+
+<!-- ─────────────────────── VERIFICAÇÃO ─────────────────────── -->
+<h2>8 · Verificação — Resultados da Simulação GHDL</h2>
+
+<p>
+  O testbench foi atualizado com dois processos de verificação automática:
+</p>
+
+<ol class="steps">
+  <li><span class="step-num">1</span>
+    <div>
+      <strong>check_no_spurious</strong> — assert em cada falling_edge que LD R5,0 (addr 5)
+      e LD R3,0 (addr 22) nunca apareçam no IR em estado execute. Nenhuma falha detectada.
+    </div>
+  </li>
+  <li><span class="step-num">2</span>
+    <div>
+      <strong>check_r5_sequence</strong> — aguarda SUBI R5,R5,1 em execute e verifica
+      ula_out_o = valor esperado. Verifica 10 iterações.
+    </div>
+  </li>
+</ol>
+
+<pre><span class="cm">-- Saída do GHDL (ghdl -r processador_tb):</span>
+processador_tb.vhd:100:@<span class="num">1300</span>ns:  (report note): PASS iter <span class="num">1</span>: R5=<span class="num">12</span>
+processador_tb.vhd:100:@<span class="num">3400</span>ns:  (report note): PASS iter <span class="num">2</span>: R5=<span class="num">19</span>
+processador_tb.vhd:100:@<span class="num">5500</span>ns:  (report note): PASS iter <span class="num">3</span>: R5=<span class="num">26</span>
+processador_tb.vhd:100:@<span class="num">7600</span>ns:  (report note): PASS iter <span class="num">4</span>: R5=<span class="num">33</span>
+processador_tb.vhd:100:@<span class="num">9700</span>ns:  (report note): PASS iter <span class="num">5</span>: R5=<span class="num">40</span>
+processador_tb.vhd:100:@<span class="num">11800</span>ns: (report note): PASS iter <span class="num">6</span>: R5=<span class="num">47</span>
+processador_tb.vhd:100:@<span class="num">13900</span>ns: (report note): PASS iter <span class="num">7</span>: R5=<span class="num">54</span>
+processador_tb.vhd:100:@<span class="num">16000</span>ns: (report note): PASS iter <span class="num">8</span>: R5=<span class="num">61</span>
+processador_tb.vhd:100:@<span class="num">18100</span>ns: (report note): PASS iter <span class="num">9</span>: R5=<span class="num">68</span>
+processador_tb.vhd:100:@<span class="num">20200</span>ns: (report note): PASS iter <span class="num">10</span>: R5=<span class="num">75</span>
+processador_tb.vhd:105:@<span class="num">20200</span>ns: (report note): === Verificacao q_r5 OK: 12,19,26,...,75 ===</pre>
+
+<h3>Checklist do enunciado</h3>
+<table>
+  <tr><th>Critério do professor</th><th>Status</th></tr>
+  <tr><td>Instrução com binário 0x00 é NOP</td><td><span class="badge-ok">OK</span> — opcode 0000 = NOP</td></tr>
+  <tr><td>Instrução no endereço 0x0 NÃO é NOP</td><td><span class="badge-ok">OK</span> — end 0 = LD R3,5</td></tr>
+  <tr><td>Instrução no end 0x0 é executada</td><td><span class="badge-ok">OK</span> — R3 = 5 confirmado</td></tr>
+  <tr><td>Não executa instrução seguinte ao desvio</td><td><span class="badge-ok">OK</span> — LD R5,0 e LD R3,0 nunca executam (assert confirma)</td></tr>
+  <tr><td>Sequência R5 = 12, 19, 26, 33…</td><td><span class="badge-ok">OK</span> — 10 iterações verificadas pelo GHDL</td></tr>
+  <tr><td>Listagem assembly na ROM</td><td><span class="badge-ok">OK</span> — comentários no rom.vhd</td></tr>
+  <tr><td>ISA ortogonal, sem acumulador</td><td><span class="badge-ok">OK</span> — 8 registradores, todas as instruções usam Rd/Rs</td></tr>
+  <tr><td>ROM síncrona</td><td><span class="badge-ok">OK</span> — rising_edge(clk) no process da ROM</td></tr>
+  <tr><td>IR com wr_en no estado 0</td><td><span class="badge-ok">OK</span> — wr_en_ir_o = '1' when estado_s = "00"</td></tr>
+  <tr><td>PC+1 gravado no estado 1</td><td><span class="badge-ok">OK</span> — wr_en_pc quando estado=01</td></tr>
+  <tr><td>JMP executado no estado 2</td><td><span class="badge-ok">OK</span> — wr_en_pc quando estado=10 e is_jmp=1</td></tr>
+</table>
+
+<!-- ─────────────────────── COMANDO PARA SIMULAR ─────────────────────── -->
+<h2>9 · Como compilar e simular</h2>
+<pre><span class="cm"># Dentro da pasta LAB5:</span>
+make clean   <span class="cm"># apaga objetos antigos</span>
+make         <span class="cm"># analisa, elabora e simula (gera result_proc.ghw)</span>
+
+<span class="cm"># Ver formas de onda:</span>
+make wave    <span class="cm"># abre GTKWave com result_proc.ghw</span>
+
+<span class="cm"># Ou manualmente:</span>
+ghdl -r processador_tb --wave=result_proc.ghw 2>&1 | grep -v metavalue</pre>
+
+<p>
+  Na apresentação para o professor, os sinais a mostrar no GTKWave (nesta ordem):
+  <strong>rst, clk, estado_o, pc_o, instr_o, ula_out_o, q_r3, q_r4, q_r5</strong>.
+</p>
+
+</div><!-- .page -->
+
+<div class="footer">
+  LAB5 · µProcessador 5 "Calculadora Programável" · UTFPR · Arquitetura de Computadores<br>
+  Todos os testes passam com GHDL · Sequência R5 verificada: 12, 19, 26, 33, 40, 47, 54, 61, 68, 75
+</div>
+
+</body>
+</html>
