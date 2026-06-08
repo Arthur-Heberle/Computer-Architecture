@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAB6 – µProcessador "Somador de Loop"</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --bg2:      #1a1d2e;
+    --bg3:      #242740;
+    --accent:   #6c8eff;
+    --accent2:  #ff7eb3;
+    --accent3:  #4ecca3;
+    --accent4:  #ffd166;
+    --accent5:  #ff6b6b;
+    --text:     #e8eaf6;
+    --subtext:  #9fa8da;
+    --border:   #2e3256;
+    --code-bg:  #141824;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  a { color: var(--accent); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .hero {
+    text-align: center;
+    padding: 60px 20px 50px;
+    background: linear-gradient(160deg, #1a1d2e 0%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .hero h1 { font-size: 2.6rem; font-weight: 800; line-height: 1.2; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--subtext); margin-top: 14px; font-size: 1.05rem; }
+
+  h2 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--accent);
+    border-left: 4px solid var(--accent);
+    padding-left: 14px;
+    margin: 52px 0 22px;
+  }
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent4);
+    margin: 28px 0 12px;
+  }
+  p { margin-bottom: 12px; color: #c5cae9; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 22px 18px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card .tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+  .tag-rom   { background: #1a2744; color: #6c8eff; }
+  .tag-reg   { background: #1a2e2e; color: #4ecca3; }
+  .tag-ctrl  { background: #2e1a2e; color: #ff7eb3; }
+  .tag-top   { background: #2e2a1a; color: #ffd166; }
+  .tag-alu   { background: #2e1a1a; color: #ff6b6b; }
+  .tag-tb    { background: #1a2229; color: #80cbc4; }
+  .card h4 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .card p  { font-size: .88rem; color: var(--subtext); margin: 0; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-size: .82rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    line-height: 1.6;
+    margin: 14px 0;
+  }
+  .kw  { color: #7986cb; }
+  .cm  { color: #546e7a; font-style: italic; }
+  .str { color: #4ecca3; }
+  .num { color: #ffd166; }
+  .sig { color: #ff7eb3; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    margin: 16px 0;
+  }
+  th {
+    background: var(--bg3);
+    color: var(--accent);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: .8rem;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--accent);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: #c5cae9;
+    vertical-align: top;
+  }
+  tr:hover td { background: var(--bg3); }
+  .mono { font-family: monospace; font-size: .92em; }
+  .badge-ok  { background:#1b3a1b; color:#4ecca3; padding:2px 8px; border-radius:10px; font-size:.78rem; font-weight:700; }
+  .badge-bug { background:#3a1b1b; color:#ff6b6b; padding:2px 8px; border-radius:10px; font-size:.78rem; font-weight:700; }
+  .badge-fix { background:#3a2e1a; color:#ffd166; padding:2px 8px; border-radius:10px; font-size:.78rem; font-weight:700; }
+
+  svg text { font-family: 'Segoe UI', system-ui, sans-serif; }
+  .diagram-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+
+  .timing {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: monospace;
+    font-size: .82rem;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text);
+    line-height: 1.8;
+  }
+  .t-label { color: var(--subtext); }
+  .t-ok    { color: var(--accent3); }
+  .t-bad   { color: var(--accent5); }
+  .t-fix   { color: var(--accent4); }
+
+  .panel {
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    border-left: 5px solid;
+  }
+  .panel-bug { background: #1e1212; border-color: #ff6b6b; }
+  .panel-fix { background: #12201a; border-color: #4ecca3; }
+  .panel-info{ background: #131a2e; border-color: #6c8eff; }
+  .panel h4  { font-size: .95rem; font-weight: 700; margin-bottom: 10px; }
+  .panel-bug h4 { color: #ff6b6b; }
+  .panel-fix h4 { color: #4ecca3; }
+  .panel-info h4 { color: #6c8eff; }
+  .panel p   { font-size: .88rem; color: var(--subtext); }
+
+  .steps { list-style: none; margin: 16px 0; }
+  .steps li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+    color: #c5cae9;
+  }
+  .steps li:last-child { border: none; }
+  .step-num {
+    min-width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: .78rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-letter {
+    min-width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--bg3);
+    color: var(--accent4);
+    font-weight: 700;
+    font-size: .8rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--accent4);
+  }
+  .step-bug {
+    min-width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #3a1b1b;
+    color: #ff6b6b;
+    font-weight: 700;
+    font-size: .8rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #ff6b6b;
+  }
+
+  .instr-bits {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: monospace;
+    font-size: .82rem;
+    margin: 14px 0;
+  }
+  .bit-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 2px solid var(--bg);
+    flex: 1;
+  }
+  .bit-group:last-child { border-right: none; }
+  .bit-top {
+    width: 100%;
+    text-align: center;
+    padding: 6px 4px;
+    font-weight: 700;
+    font-size: .75rem;
+  }
+  .bit-bot {
+    width: 100%;
+    text-align: center;
+    padding: 4px 4px;
+    font-size: .7rem;
+    color: var(--subtext);
+    background: var(--bg2);
+  }
+  .bg-op    { background: #1a2744; color: #6c8eff; }
+  .bg-rd    { background: #1a2e28; color: #4ecca3; }
+  .bg-rs1   { background: #2e281a; color: #ffd166; }
+  .bg-rs2   { background: #2e1a2e; color: #ff7eb3; }
+  .bg-cte   { background: #2e1e1a; color: #ff9f7e; }
+  .bg-off   { background: #1a1e2e; color: #b0bec5; }
+
+  .bits-example {
+    display: flex;
+    font-family: monospace;
+    font-size: 0.78rem;
+    margin: 8px 0;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .be-group {
+    padding: 5px 8px;
+    text-align: center;
+    border-right: 1px solid var(--bg);
+  }
+  .be-group:last-child { border-right: none; }
+
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--subtext);
+    font-size: .82rem;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin: 16px 0;
+  }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .highlight-box {
+    background: #1a2035;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    font-size: .9rem;
+    color: #c5cae9;
+  }
+  .highlight-box strong { color: var(--accent3); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">UTFPR · Arquitetura de Computadores</div>
+  <h1>µProcessador 6 — <span>"Somador de Loop"</span></h1>
+  <p>Explicação completa do LAB6: extensão de sinal, constantes de 5 bits, flush de branches condicionais e os 3 bugs corrigidos.</p>
+</div>
+
+<div class="page">
+
+<!-- ═══════════════════════════════ 1. VISÃO GERAL ═══════════════════════════════ -->
+<h2>1 · Visão Geral</h2>
+<p>
+  O LAB6 estende o processador do LAB5 com <strong>desvios condicionais (BLE e BCC)</strong>.
+  O programa de teste calcula a soma <strong>0 + 1 + 2 + … + 29 = 435</strong> usando um loop
+  controlado por BLE (condição R3 &lt; 30), e copia o resultado para R5 ao final.
+</p>
+<p>
+  Resultado esperado ao término da simulação:
+</p>
+
+<div class="highlight-box">
+  <strong>R3 = 30</strong> (0x001E) — contador, valor no qual R3&lt;30 deixa de ser verdade<br>
+  <strong>R4 = 435</strong> (0x01B3) — acumulador da soma 0+1+2+…+29<br>
+  <strong>R5 = 435</strong> (0x01B3) — cópia de R4 após o loop
+</div>
+
+<p>
+  Ao longo do desenvolvimento foram encontrados e corrigidos <strong>3 bugs</strong> que impediam
+  esses resultados. Cada bug é explicado em detalhes na seção 6.
+</p>
+
+<!-- Diagrama de blocos -->
+<div class="diagram-wrap">
+  <svg viewBox="0 0 960 450" width="100%" style="max-width:960px; display:block; margin:auto;">
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#6c8eff"/>
+      </marker>
+      <marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#4ecca3"/>
+      </marker>
+      <marker id="arr3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ffd166"/>
+      </marker>
+      <marker id="arr4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ff7eb3"/>
+      </marker>
+    </defs>
+
+    <!-- ROM -->
+    <rect x="30" y="160" width="120" height="65" rx="8" fill="#1a2744" stroke="#6c8eff" stroke-width="1.5"/>
+    <text x="90" y="184" text-anchor="middle" fill="#6c8eff" font-size="13" font-weight="bold">rom.vhd</text>
+    <text x="90" y="203" text-anchor="middle" fill="#9fa8da" font-size="10">ROM Síncrona</text>
+    <text x="90" y="217" text-anchor="middle" fill="#9fa8da" font-size="10">128×15 bits</text>
+
+    <!-- PC -->
+    <rect x="30" y="50" width="120" height="65" rx="8" fill="#1a2e28" stroke="#4ecca3" stroke-width="1.5"/>
+    <text x="90" y="74" text-anchor="middle" fill="#4ecca3" font-size="13" font-weight="bold">pc.vhd</text>
+    <text x="90" y="93" text-anchor="middle" fill="#9fa8da" font-size="10">Contador de</text>
+    <text x="90" y="107" text-anchor="middle" fill="#9fa8da" font-size="10">Programa 7 bits</text>
+
+    <line x1="90" y1="115" x2="90" y2="160" stroke="#4ecca3" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <text x="96" y="143" fill="#4ecca3" font-size="9">endereço</text>
+
+    <!-- MUX flush -->
+    <rect x="158" y="173" width="50" height="38" rx="6" fill="#242740" stroke="#ffd166" stroke-width="1.2"/>
+    <text x="183" y="190" text-anchor="middle" fill="#ffd166" font-size="8.5" font-weight="bold">MUX</text>
+    <text x="183" y="203" text-anchor="middle" fill="#ffd166" font-size="8">flush</text>
+
+    <!-- IR -->
+    <rect x="215" y="160" width="120" height="65" rx="8" fill="#2e1a2e" stroke="#ff7eb3" stroke-width="1.5"/>
+    <text x="275" y="184" text-anchor="middle" fill="#ff7eb3" font-size="13" font-weight="bold">ir.vhd</text>
+    <text x="275" y="203" text-anchor="middle" fill="#9fa8da" font-size="10">Registrador de</text>
+    <text x="275" y="217" text-anchor="middle" fill="#9fa8da" font-size="10">Instrução 15 bits</text>
+
+    <line x1="150" y1="192" x2="158" y2="192" stroke="#6c8eff" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="208" y1="192" x2="215" y2="192" stroke="#6c8eff" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="158" y="165" fill="#9fa8da" font-size="8">dado</text>
+
+    <!-- MUX sinal -->
+    <text x="183" y="215" text-anchor="middle" fill="#ffd166" font-size="8">↑flush</text>
+
+    <!-- Sign-extend box (novo no LAB6) -->
+    <rect x="215" y="260" width="120" height="50" rx="8" fill="#2e2010" stroke="#ffd166" stroke-width="1.5"/>
+    <text x="275" y="279" text-anchor="middle" fill="#ffd166" font-size="11" font-weight="bold">sign_ext</text>
+    <text x="275" y="296" text-anchor="middle" fill="#9fa8da" font-size="9">5 bits → 16 bits</text>
+    <text x="275" y="308" text-anchor="middle" fill="#9fa8da" font-size="8">(extensão de sinal)</text>
+
+    <!-- IR → sign_ext -->
+    <line x1="275" y1="225" x2="275" y2="260" stroke="#ff7eb3" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+    <text x="280" y="247" fill="#9fa8da" font-size="8">ir[4:0]</text>
+
+    <!-- UC6 -->
+    <rect x="400" y="130" width="165" height="135" rx="8" fill="#1a1e2e" stroke="#b0bec5" stroke-width="1.5"/>
+    <text x="482" y="154" text-anchor="middle" fill="#b0bec5" font-size="13" font-weight="bold">uc6.vhd</text>
+    <text x="482" y="172" text-anchor="middle" fill="#9fa8da" font-size="9.5">Unidade de Controle</text>
+    <text x="482" y="187" text-anchor="middle" fill="#9fa8da" font-size="9">decodifica opcode</text>
+    <text x="482" y="201" text-anchor="middle" fill="#9fa8da" font-size="9">gera flush, wr_en_*</text>
+    <text x="482" y="215" text-anchor="middle" fill="#9fa8da" font-size="9">pc_next, sel_*, ula_op</text>
+    <text x="482" y="229" text-anchor="middle" fill="#ff7eb3" font-size="9" font-style="italic">+ suporte a BLE / BCC</text>
+    <text x="482" y="243" text-anchor="middle" fill="#ff7eb3" font-size="9" font-style="italic">+ flag_ble_i / flag_bcc_i</text>
+    <text x="482" y="257" text-anchor="middle" fill="#9fa8da" font-size="9">addr_abs para branch</text>
+
+    <!-- Estado -->
+    <rect x="400" y="305" width="165" height="55" rx="8" fill="#131a24" stroke="#607d8b" stroke-width="1.2"/>
+    <text x="482" y="329" text-anchor="middle" fill="#90a4ae" font-size="12" font-weight="bold">maq_estados.vhd</text>
+    <text x="482" y="347" text-anchor="middle" fill="#607d8b" font-size="9.5">Contador 00→01→10→00</text>
+
+    <!-- IR → UC6 -->
+    <line x1="335" y1="192" x2="400" y2="192" stroke="#ff7eb3" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="345" y="183" fill="#ff7eb3" font-size="9">instr[14:0]</text>
+
+    <!-- UC6 → PC -->
+    <path d="M 400 148 Q 290 95 150 77" fill="none" stroke="#4ecca3" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr2)"/>
+    <text x="270" y="110" fill="#4ecca3" font-size="8.5">pc_next / wr_en_pc</text>
+
+    <!-- UC6 → IR (flush) -->
+    <path d="M 400 175 Q 370 280 335 265 Q 310 255 295 235" fill="none" stroke="#ffd166" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr3)"/>
+    <text x="340" y="280" fill="#ffd166" font-size="8">wr_en_ir / flush</text>
+
+    <!-- Estado → UC6 -->
+    <line x1="482" y1="305" x2="482" y2="265" stroke="#607d8b" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="488" y="292" fill="#607d8b" font-size="8.5">estado[1:0]</text>
+
+    <!-- Banco de Regs -->
+    <rect x="635" y="90" width="145" height="70" rx="8" fill="#2e1a1a" stroke="#ff6b6b" stroke-width="1.5"/>
+    <text x="707" y="114" text-anchor="middle" fill="#ff6b6b" font-size="13" font-weight="bold">banco_regs.vhd</text>
+    <text x="707" y="132" text-anchor="middle" fill="#9fa8da" font-size="9.5">8 registradores × 16 bits</text>
+    <text x="707" y="148" text-anchor="middle" fill="#9fa8da" font-size="9">R0…R7</text>
+
+    <!-- ULA -->
+    <rect x="635" y="210" width="145" height="70" rx="8" fill="#1e1a2e" stroke="#ce93d8" stroke-width="1.5"/>
+    <text x="707" y="236" text-anchor="middle" fill="#ce93d8" font-size="13" font-weight="bold">ULA.vhd</text>
+    <text x="707" y="254" text-anchor="middle" fill="#9fa8da" font-size="9.5">ADD / SUB   flags: C Z N V</text>
+    <text x="707" y="268" text-anchor="middle" fill="#ff7eb3" font-size="9">+ BLE + BCC</text>
+
+    <!-- Flags FF -->
+    <rect x="635" y="325" width="145" height="45" rx="8" fill="#1a1e10" stroke="#4ecca3" stroke-width="1.2"/>
+    <text x="707" y="345" text-anchor="middle" fill="#4ecca3" font-size="11" font-weight="bold">reg1bit (flags)</text>
+    <text x="707" y="362" text-anchor="middle" fill="#9fa8da" font-size="9">flag_ble / flag_bcc</text>
+
+    <!-- UC6 → Banco -->
+    <line x1="565" y1="158" x2="635" y2="133" stroke="#ff6b6b" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+    <text x="573" y="140" fill="#ff6b6b" font-size="8">wr_en_reg</text>
+    <text x="573" y="151" fill="#ff6b6b" font-size="8">reg_wr/r1/r2</text>
+
+    <!-- Banco → ULA -->
+    <line x1="707" y1="160" x2="707" y2="210" stroke="#ce93d8" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="713" y="195" fill="#ce93d8" font-size="8.5">data_r1/r2</text>
+
+    <!-- ULA → Banco -->
+    <path d="M 780 230 Q 820 190 820 125 Q 820 100 780 103" fill="none" stroke="#4ecca3" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <text x="826" y="180" fill="#4ecca3" font-size="8.5">ula_out</text>
+    <text x="826" y="192" fill="#4ecca3" font-size="8.5">→data_wr</text>
+
+    <!-- UC6 → ULA -->
+    <line x1="565" y1="220" x2="635" y2="245" stroke="#ce93d8" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+    <text x="570" y="241" fill="#ce93d8" font-size="8">ula_op</text>
+
+    <!-- ULA → Flags FF -->
+    <line x1="707" y1="280" x2="707" y2="325" stroke="#4ecca3" stroke-width="1.2" marker-end="url(#arr2)"/>
+    <text x="713" y="312" fill="#4ecca3" font-size="8">BLE/BCC</text>
+
+    <!-- Flags → UC6 -->
+    <path d="M 635 347 Q 580 347 580 265 Q 580 248 565 240" fill="none" stroke="#4ecca3" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr2)"/>
+    <text x="530" y="310" fill="#4ecca3" font-size="8">flag_ble_i</text>
+    <text x="530" y="323" fill="#4ecca3" font-size="8">flag_bcc_i</text>
+
+    <!-- sign_ext → Banco/ULA (cte_ext) -->
+    <line x1="335" y1="285" x2="420" y2="285" stroke="#ffd166" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr3)"/>
+    <line x1="420" y1="285" x2="420" y2="230" stroke="#ffd166" stroke-width="1.2"/>
+    <line x1="420" y1="230" x2="635" y2="230" stroke="#ffd166" stroke-width="1.2" marker-end="url(#arr3)"/>
+    <text x="365" y="298" fill="#ffd166" font-size="8">cte_ext (16b)</text>
+
+    <!-- Legenda -->
+    <rect x="30" y="390" width="900" height="50" rx="6" fill="#131520" stroke="#2e3256" stroke-width="1"/>
+    <text x="50" y="410" fill="#9fa8da" font-size="10" font-weight="bold">LEGENDA:</text>
+    <line x1="120" y1="408" x2="155" y2="408" stroke="#6c8eff" stroke-width="2"/>
+    <text x="160" y="412" fill="#9fa8da" font-size="9">dados</text>
+    <line x1="220" y1="408" x2="255" y2="408" stroke="#4ecca3" stroke-width="2"/>
+    <text x="260" y="412" fill="#9fa8da" font-size="9">endereço / PC</text>
+    <line x1="360" y1="408" x2="395" y2="408" stroke="#ffd166" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="400" y="412" fill="#9fa8da" font-size="9">sinais de controle</text>
+    <line x1="510" y1="408" x2="545" y2="408" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="550" y="412" fill="#9fa8da" font-size="9">controles de registrador</text>
+    <line x1="695" y1="408" x2="730" y2="408" stroke="#4ecca3" stroke-width="2" stroke-dasharray="4,3"/>
+    <text x="735" y="412" fill="#9fa8da" font-size="9">flags</text>
+    <text x="50" y="430" fill="#607d8b" font-size="9">processador6.vhd conecta todos os componentes (top-level). Novidade vs LAB5: extensão de sinal, BLE/BCC, flags com flip-flops.</text>
+  </svg>
+</div>
+
+<!-- ═══════════════════════════════ 2. COMPONENTES ═══════════════════════════════ -->
+<h2>2 · O que cada arquivo faz</h2>
+<div class="cards">
+
+  <div class="card">
+    <span class="tag tag-top">top-level</span>
+    <h4>processador6.vhd</h4>
+    <p>Nível mais alto. Instancia e conecta todos os componentes. Contém o <strong>mux de flush</strong>
+    e, novidade do LAB6, a lógica de <strong>extensão de sinal</strong> do campo cte5 do IR (5 bits → 16 bits).
+    Essa extensão alimenta tanto o SUBI quanto o LD.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-rom">ROM</span>
+    <h4>rom.vhd</h4>
+    <p>Memória de programa síncrona, 128 posições × 15 bits. Captura o endereço na <em>borda de subida</em>
+    do clock e apresenta o dado no ciclo seguinte (latência de 1 ciclo). Essa latência é a origem dos
+    problemas de flush também em branches condicionais.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-reg">Registrador</span>
+    <h4>pc.vhd</h4>
+    <p>Contador de programa de 7 bits. Atualizado com PC+1 no estado 01, e com o endereço de destino do desvio
+    no estado 10 (quando JMP, BLE ou BCC executam).</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-reg">Registrador</span>
+    <h4>ir.vhd</h4>
+    <p>Instruction Register de 15 bits. O <em>wr_en</em> é ativado <strong>somente no estado 00 (fetch)</strong>.
+    É exatamente nesse ciclo que o flush deve agir — forçando zero (NOP) na entrada do IR quando há desvio.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-ctrl">Controle</span>
+    <h4>uc6.vhd</h4>
+    <p>Unidade de controle. Novidades vs LAB5: decodifica os opcodes BLE (0101) e BCC (0110);
+    aceita entradas <em>flag_ble_i</em> e <em>flag_bcc_i</em>; gera <em>addr_abs_s</em> como destino
+    absoluto dos branches. O flush e o ajuste de PC (target−1) seguem a mesma lógica do JMP.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-ctrl">Controle</span>
+    <h4>maq_estados.vhd</h4>
+    <p>Contador síncrono de 2 bits: 00 → 01 → 10 → 00 → … (fetch → decode → execute). Idêntico ao LAB5.
+    Cada instrução consume exatamente 3 ciclos de clock.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-alu">Dados</span>
+    <h4>banco_regs.vhd</h4>
+    <p>Banco de 8 registradores de 16 bits (R0–R7). Decodificador 1-de-8 para escrita;
+    dois MUXes de leitura independentes. Os sinais internos <em>q_r0…q_r7</em> são visíveis no GTKWave.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-alu">Dados</span>
+    <h4>ULA.vhd</h4>
+    <p>ULA de 16 bits, operações ADD e SUB. Calcula flags C, Z, N, V e <strong>BLE</strong> e <strong>BCC</strong>:
+    <br>• BLE = 1 quando Z=1 ou N≠V (resultado ≤ 0 com sinal)
+    <br>• BCC = 1 quando C=0 (sem borrow / sem carry)</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-reg">Novo no LAB6</span>
+    <h4>reg1bit.vhd (flags)</h4>
+    <p>Flip-flop de 1 bit com wr_en. Dois são instanciados no top-level para armazenar
+    <em>flag_ble</em> e <em>flag_bcc</em>. São atualizados somente quando instruções aritméticas
+    executam (SUBI ou ADD). O BLE é testado pelo SUBI antes do branch.</p>
+  </div>
+
+  <div class="card">
+    <span class="tag tag-tb">Testbench</span>
+    <h4>processador_tb.vhd</h4>
+    <p>Gera clock de 100 ns, reset de 200 ns, simula 100 µs. A verificação é feita visualmente
+    no GTKWave: acompanhar q_r3 (contador), q_r4 (acumulador) e q_r5 (resultado final).</p>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════ 3. MÁQUINA DE ESTADOS ═══════════════════════════════ -->
+<h2>3 · Máquina de 3 Estados (idêntica ao LAB5)</h2>
+
+<div class="diagram-wrap">
+  <svg viewBox="0 0 760 225" width="100%" style="max-width:760px; display:block; margin:auto;">
+    <defs>
+      <marker id="a1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#6c8eff"/>
+      </marker>
+    </defs>
+    <circle cx="130" cy="110" r="75" fill="#13203a" stroke="#6c8eff" stroke-width="2"/>
+    <text x="130" y="100" text-anchor="middle" fill="#6c8eff" font-size="20" font-weight="bold">00</text>
+    <text x="130" y="118" text-anchor="middle" fill="#9fa8da" font-size="11">FETCH</text>
+    <text x="130" y="133" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_ir = 1</text>
+    <text x="130" y="147" text-anchor="middle" fill="#607d8b" font-size="9.5">IR ← MUX(ROM, NOP)</text>
+
+    <circle cx="380" cy="110" r="75" fill="#1e2a1e" stroke="#4ecca3" stroke-width="2"/>
+    <text x="380" y="100" text-anchor="middle" fill="#4ecca3" font-size="20" font-weight="bold">01</text>
+    <text x="380" y="118" text-anchor="middle" fill="#9fa8da" font-size="11">DECODE</text>
+    <text x="380" y="133" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_pc = 1</text>
+    <text x="380" y="147" text-anchor="middle" fill="#607d8b" font-size="9.5">PC ← PC + 1</text>
+
+    <circle cx="630" cy="110" r="75" fill="#2a1e1e" stroke="#ff6b6b" stroke-width="2"/>
+    <text x="630" y="90" text-anchor="middle" fill="#ff6b6b" font-size="20" font-weight="bold">10</text>
+    <text x="630" y="108" text-anchor="middle" fill="#9fa8da" font-size="11">EXECUTE</text>
+    <text x="630" y="123" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_reg (se escrita)</text>
+    <text x="630" y="137" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_pc (se JMP/BLE/BCC)</text>
+    <text x="630" y="151" text-anchor="middle" fill="#607d8b" font-size="9.5">wr_en_flag (se aritmética)</text>
+
+    <line x1="205" y1="100" x2="305" y2="100" stroke="#6c8eff" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="255" y="92" text-anchor="middle" fill="#9fa8da" font-size="9">rising_edge</text>
+
+    <line x1="455" y1="100" x2="555" y2="100" stroke="#6c8eff" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="505" y="92" text-anchor="middle" fill="#9fa8da" font-size="9">rising_edge</text>
+
+    <path d="M 630 185 Q 630 210 380 210 Q 130 210 130 185" fill="none" stroke="#6c8eff" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="380" y="207" text-anchor="middle" fill="#9fa8da" font-size="9">rising_edge</text>
+
+    <line x1="50" y1="40" x2="90" y2="70" stroke="#ff6b6b" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a1)"/>
+    <text x="28" y="35" fill="#ff6b6b" font-size="9">rst=1</text>
+  </svg>
+</div>
+
+<table>
+  <tr>
+    <th>Estado</th><th>Nome</th><th>wr_en_ir</th><th>wr_en_pc</th><th>wr_en_reg</th><th>wr_en_flag</th><th>Ação principal</th>
+  </tr>
+  <tr>
+    <td><span class="mono" style="color:#6c8eff">00</span></td>
+    <td>Fetch</td>
+    <td><span class="badge-ok">1</span></td>
+    <td>0</td><td>0</td><td>0</td>
+    <td>IR captura saída do mux (ROM ou NOP de flush). ROM já tem dado[PC] do ciclo anterior.</td>
+  </tr>
+  <tr>
+    <td><span class="mono" style="color:#4ecca3">01</span></td>
+    <td>Decode</td>
+    <td>0</td>
+    <td><span class="badge-ok">1</span></td>
+    <td>0</td><td>0</td>
+    <td>PC ← PC + 1 (sempre). IR é lido pela UC para decodificar.</td>
+  </tr>
+  <tr>
+    <td><span class="mono" style="color:#ff6b6b">10</span></td>
+    <td>Execute</td>
+    <td>0</td>
+    <td><span class="badge-ok">1</span> se branch</td>
+    <td><span class="badge-ok">1</span> se escrita</td>
+    <td><span class="badge-ok">1</span> se aritmética</td>
+    <td>ULA opera. Banco grava resultado. Branch atualiza PC. Flags atualizam.</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════ 4. EXTENSÃO DE SINAL ═══════════════════════════════ -->
+<h2>4 · Extensão de Sinal — O Conceito Central do LAB6</h2>
+
+<p>
+  O campo <strong>cte5</strong> (bits [4:0] da instrução) é um número de <strong>5 bits em complemento
+  de 2</strong>. Para usar esse valor em operações de 16 bits, é necessário <em>estender o sinal</em>:
+  replicar o bit mais significativo (bit 4) para preencher os 11 bits superiores.
+</p>
+
+<div class="two-col">
+  <div>
+    <h3>Faixa representável em 5 bits com sinal</h3>
+    <table>
+      <tr><th>Binário (5 bits)</th><th>Valor decimal</th></tr>
+      <tr><td class="mono">01111</td><td>+15 (máximo positivo)</td></tr>
+      <tr><td class="mono">00001</td><td>+1</td></tr>
+      <tr><td class="mono">00000</td><td>0</td></tr>
+      <tr><td class="mono">11111</td><td>−1</td></tr>
+      <tr><td class="mono">11110</td><td>−2</td></tr>
+      <tr><td class="mono">10000</td><td>−16 (mínimo negativo)</td></tr>
+    </table>
+    <p style="margin-top:10px; font-size:.85rem; color:#9fa8da;">
+      Constantes acima de +15 (como 16, 30, 31) <strong>não cabem</strong> em 5 bits com sinal.
+      Tentar codificá-las produz o valor negativo correspondente.
+    </p>
+  </div>
+  <div>
+    <h3>Como funciona a extensão de sinal</h3>
+    <p>Se bit[4] = 0 (positivo): preenche com zeros.</p>
+    <div class="bits-example">
+      <div class="be-group" style="background:#1a2744; color:#6c8eff; flex:3;">00000000000</div>
+      <div class="be-group" style="background:#2e1e1a; color:#ff9f7e; flex:2;">01111</div>
+    </div>
+    <p style="font-size:.83rem; color:#9fa8da;">→ 0x000F = +15 ✓</p>
+
+    <p style="margin-top:14px;">Se bit[4] = 1 (negativo): preenche com uns.</p>
+    <div class="bits-example">
+      <div class="be-group" style="background:#3a1b1b; color:#ff6b6b; flex:3;">11111111111</div>
+      <div class="be-group" style="background:#2e1e1a; color:#ff9f7e; flex:2;">11111</div>
+    </div>
+    <p style="font-size:.83rem; color:#9fa8da;">→ 0xFFFF = −1 ✓ (usado para incrementar R3)</p>
+  </div>
+</div>
+
+<h3>Código VHDL da extensão de sinal (processador6.vhd:133)</h3>
+<pre><span class="cm">-- Bug 1 (errado): zero-extension sempre — ignora o sinal do bit[4]</span>
+<span class="sig">cte_ext_s</span> <span class="kw">&lt;=</span> <span class="str">"00000000000"</span> <span class="kw">&</span> ir_out_s(<span class="num">4</span> <span class="kw">downto</span> <span class="num">0</span>);
+
+<span class="cm">-- Correto: extensão de sinal condicional</span>
+<span class="sig">cte_ext_s</span> <span class="kw">&lt;=</span> <span class="str">"11111111111"</span> <span class="kw">&</span> ir_out_s(<span class="num">4</span> <span class="kw">downto</span> <span class="num">0</span>) <span class="kw">when</span> ir_out_s(<span class="num">4</span>) = <span class="str">'1'</span>
+             <span class="kw">else</span> <span class="str">"00000000000"</span> <span class="kw">&</span> ir_out_s(<span class="num">4</span> <span class="kw">downto</span> <span class="num">0</span>);</pre>
+
+<!-- ═══════════════════════════════ 5. ISA ═══════════════════════════════ -->
+<h2>5 · ISA – Conjunto de Instruções (15 bits)</h2>
+
+<div class="instr-bits">
+  <div class="bit-group">
+    <div class="bit-top bg-op">[14:11]</div>
+    <div class="bit-bot">opcode (4 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-rd">[10:8]</div>
+    <div class="bit-bot">Rd destino (3 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-rs1">[7:5]</div>
+    <div class="bit-bot">Rs1 fonte 1 (3 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-rs2">[4:2]</div>
+    <div class="bit-bot">Rs2 fonte 2 (3 bits)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-cte">[4:0]</div>
+    <div class="bit-bot">cte5 (5 bits, com sinal)</div>
+  </div>
+  <div class="bit-group">
+    <div class="bit-top bg-off">[6:0]</div>
+    <div class="bit-bot">addr/offset 7 bits</div>
+  </div>
+</div>
+
+<table>
+  <tr><th>Opcode [14:11]</th><th>Mnemônico</th><th>Operação</th><th>Flags</th><th>sel_wr</th><th>Notas</th></tr>
+  <tr>
+    <td class="mono" style="color:#9fa8da">0000</td>
+    <td><strong>NOP</strong></td>
+    <td>Nada</td>
+    <td>–</td><td>–</td>
+    <td>Todos os wr_en = 0</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#6c8eff">0001</td>
+    <td><strong>LD Rd, cte5</strong></td>
+    <td>Rd ← sign_ext(cte5)</td>
+    <td>–</td><td>01 (cte)</td>
+    <td>Extensão de sinal para 16 bits</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#4ecca3">0010</td>
+    <td><strong>ADD Rd, Rs1, Rs2</strong></td>
+    <td>Rd ← Rs1 + Rs2</td>
+    <td>C Z N V BLE BCC</td><td>00 (ULA)</td>
+    <td>Atualiza todos os flags</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ffd166">0011</td>
+    <td><strong>SUBI Rd, Rs1, cte5</strong></td>
+    <td>Rd ← Rs1 − sign_ext(cte5)</td>
+    <td>C Z N V BLE BCC</td><td>00 (ULA)</td>
+    <td>cte5 em complemento de 2; SUBI Rs,Rs,−1 incrementa</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ff7eb3">0100</td>
+    <td><strong>MOV Rd, Rs1</strong></td>
+    <td>Rd ← Rs1</td>
+    <td>–</td><td>10 (R1)</td>
+    <td>Via data_r1 do banco de registradores</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ff6b6b">0101</td>
+    <td><strong>BLE addr</strong></td>
+    <td>Se flag_ble=1: PC ← addr</td>
+    <td>lê BLE</td><td>–</td>
+    <td><strong>Novo no LAB6.</strong> Desvio absoluto condicional (signed ≤ 0)</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ff6b6b">0110</td>
+    <td><strong>BCC addr</strong></td>
+    <td>Se flag_bcc=1: PC ← addr</td>
+    <td>lê BCC</td><td>–</td>
+    <td><strong>Novo no LAB6.</strong> Desvio absoluto condicional (sem carry/borrow)</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#b0bec5">1111</td>
+    <td><strong>JMP offset</strong></td>
+    <td>PC ← PC_exec + offset − 1</td>
+    <td>–</td><td>–</td>
+    <td>Desvio relativo. −1 compensa bolha NOP do flush</td>
+  </tr>
+</table>
+
+<div class="panel panel-info">
+  <h4>Condição do flag BLE</h4>
+  <p>BLE = 1 quando o resultado da ULA é <em>menor ou igual a zero</em> (com sinal):<br>
+  <strong>BLE = Z OR (N XOR V)</strong><br>
+  onde Z=zero, N=negativo, V=overflow. Isso detecta corretamente "≤ 0" em complemento de 2.
+  Usado para verificar se R3 &lt; 30: calcula SUBI R0, R3, 29 (em dois passos de 15+14) → se R0 ≤ 0, BLE dispara e o loop continua.</p>
+</div>
+
+<!-- ═══════════════════════════════ 6. PROGRAMA ═══════════════════════════════ -->
+<h2>6 · Programa de Teste na ROM</h2>
+<p>
+  O programa calcula <strong>Σ i para i = 0, 1, 2, …, 29</strong> usando R3 como contador e R4 como acumulador.
+  O loop executa enquanto R3 &lt; 30 (condição do enunciado). Ao final, R5 recebe uma cópia de R4.
+</p>
+
+<ul class="steps">
+  <li><span class="step-letter">A</span>
+    <div><strong>end 0:</strong> <span class="mono">LD R3, 0</span> — inicializa contador R3 = 0.</div></li>
+  <li><span class="step-letter">B</span>
+    <div><strong>end 1:</strong> <span class="mono">LD R4, 0</span> — inicializa acumulador R4 = 0.</div></li>
+  <li><span class="step-letter">C</span>
+    <div><strong>end 2:</strong> <span class="mono">ADD R4, R3, R4</span> — R4 = R4 + R3 (acumula o valor atual do contador). <em>Alvo do loop.</em></div></li>
+  <li><span class="step-letter">D</span>
+    <div><strong>end 3:</strong> <span class="mono">SUBI R3, R3, −1</span> — R3 = R3 + 1 (incrementa; −(−1) = +1). Constante 11111 = −1 com sinal.</div></li>
+  <li><span class="step-letter">E</span>
+    <div><strong>end 4:</strong> <span class="mono">SUBI R0, R3, 15</span> — R0 = R3 − 15 (passo 1 da comparação com 29).</div></li>
+  <li><span class="step-letter">F</span>
+    <div><strong>end 5:</strong> <span class="mono">SUBI R0, R0, 14</span> — R0 = R0 − 14 = R3 − 29. Seta o flag BLE.</div></li>
+  <li><span class="step-letter">G</span>
+    <div><strong>end 6:</strong> <span class="mono">BLE 2</span> — se R3 &lt; 30 (R3−29 ≤ 0, BLE=1), volta para end 2 (ADD). Caso contrário segue em frente.</div></li>
+  <li><span class="step-letter">H</span>
+    <div><strong>end 7:</strong> <span class="mono">MOV R5, R4</span> — copia R4 para R5. Executa apenas quando o loop termina.</div></li>
+</ul>
+
+<div class="panel panel-info">
+  <h4>Por que a comparação usa duas instruções SUBI?</h4>
+  <p>
+    O campo cte5 tem apenas 5 bits com sinal: range de −16 a +15. O valor 29 não cabe em uma única constante
+    (máximo positivo é +15). A solução é subtrair em dois passos: 15 + 14 = 29:
+    <br><br>
+    <strong>SUBI R0, R3, 15</strong> → R0 = R3 − 15<br>
+    <strong>SUBI R0, R0, 14</strong> → R0 = R3 − 29<br><br>
+    Quando R3 ≤ 29 (i.e., R3 &lt; 30): R0 ≤ 0 → BLE = 1 → loop continua.<br>
+    Quando R3 = 30: R0 = 1 > 0 → BLE = 0 → loop encerra.
+  </p>
+</div>
+
+<h3>Tabela de codificação da ROM</h3>
+<table>
+  <tr><th>Endereço</th><th>Assembly</th><th>Binário (15 bits)</th><th>Executada?</th></tr>
+  <tr>
+    <td>0</td>
+    <td class="mono">LD R3, 0</td>
+    <td class="mono">000101100000000</td>
+    <td><span class="badge-ok">Sim (1×)</span></td>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td class="mono">LD R4, 0</td>
+    <td class="mono">000110000000000</td>
+    <td><span class="badge-ok">Sim (1×)</span></td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td class="mono">ADD R4, R3, R4</td>
+    <td class="mono">001010001110000</td>
+    <td><span class="badge-ok">Sim (loop 31×)</span></td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td class="mono">SUBI R3, R3, −1</td>
+    <td class="mono">001101101111111</td>
+    <td><span class="badge-ok">Sim (loop 31×)</span></td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td class="mono">SUBI R0, R3, 15</td>
+    <td class="mono">001100001101111</td>
+    <td><span class="badge-ok">Sim (loop 31×)</span></td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td class="mono">SUBI R0, R0, 15</td>
+    <td class="mono">001100000001111</td>
+    <td><span class="badge-ok">Sim (loop 31×)</span></td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td class="mono">BLE 2</td>
+    <td class="mono">010100000000010</td>
+    <td><span class="badge-ok">Sim (31× tomado, 1× não tomado)</span></td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td class="mono">MOV R5, R4</td>
+    <td class="mono">010010110000000</td>
+    <td><span class="badge-ok">Sim (1×, ao fim do loop)</span></td>
+  </tr>
+  <tr>
+    <td>8–127</td>
+    <td class="mono">NOP</td>
+    <td class="mono">000000000000000</td>
+    <td>–</td>
+  </tr>
+</table>
+
+<h3>Verificação da codificação das instruções críticas</h3>
+<div class="panel panel-info">
+  <h4>Como decodificar manualmente um binário de 15 bits</h4>
+  <p>Formato: [14:11]=opcode, [10:8]=Rd, [7:5]=Rs1, [4:0]=cte5 (ou [4:2]=Rs2)</p>
+  <p>
+    <strong>SUBI R3, R3, −1</strong> = <span class="mono">001101101111111</span><br>
+    opcode = 0011 (SUBI) | Rd = 011 (R3) | Rs1 = 011 (R3) | cte5 = 11111 (= −1) ✓<br>
+    <br>
+    <strong>SUBI R0, R3, 15</strong> = <span class="mono">001100001101111</span><br>
+    opcode = 0011 (SUBI) | Rd = 000 (R0) | Rs1 = 011 (R3) | cte5 = 01111 (= +15) ✓<br>
+    <br>
+    <strong>SUBI R0, R0, 15</strong> = <span class="mono">001100000001111</span><br>
+    opcode = 0011 (SUBI) | Rd = 000 (R0) | Rs1 = 000 (R0) | cte5 = 01111 (= +15) ✓<br>
+    <br>
+    <strong>BLE 2</strong> = <span class="mono">010100000000010</span><br>
+    opcode = 0101 (BLE) | addr[6:0] = 0000010 (= 2 decimal) ✓
+  </p>
+</div>
+
+<!-- ═══════════════════════════════ 7. OS 3 BUGS ═══════════════════════════════ -->
+<h2>7 · Os 3 Bugs — Diagnóstico Completo</h2>
+
+<p>
+  Três bugs distintos foram encontrados, cada um ocultando o seguinte. A correção precisou ser feita
+  <em>na ordem certa</em>: Bug 1 → Bug 2 → Bug 3.
+</p>
+
+<!-- BUG 1 -->
+<h3>Bug 1 — Zero-extension ao invés de extensão de sinal (processador6.vhd:133)</h3>
+
+<div class="panel panel-bug">
+  <h4>Sintoma observado no GTKWave</h4>
+  <p>
+    R3 <strong>decrementava 31 unidades</strong> por iteração (ex: 0x0000, 0xFFE1, 0xFFC2…)
+    em vez de incrementar 1. R4 acumulava valores negativos sem sentido.
+  </p>
+</div>
+
+<div class="two-col">
+  <div>
+    <h3>Causa raiz</h3>
+    <p>
+      A instrução <span class="mono">SUBI R3, R3, −1</span> codifica a constante −1 como
+      <span class="mono">11111</span> em 5 bits. Com <em>zero-extension</em>, esse valor
+      se torna <span class="mono">0x001F = 31</span> (não −1).
+    </p>
+    <p>
+      O SUBI então computa <strong>R3 − 31</strong> em vez de R3 − (−1) = R3 + 1,
+      causando o decremento de 31 visto no waveform.
+    </p>
+  </div>
+  <div>
+    <h3>Análise bit a bit</h3>
+    <table>
+      <tr><th>Valor</th><th>5 bits</th><th>Zero-ext (errado)</th><th>Sign-ext (certo)</th></tr>
+      <tr>
+        <td>−1</td>
+        <td class="mono">11111</td>
+        <td class="mono" style="color:#ff6b6b">0x001F (+31)</td>
+        <td class="mono" style="color:#4ecca3">0xFFFF (−1)</td>
+      </tr>
+      <tr>
+        <td>−2</td>
+        <td class="mono">11110</td>
+        <td class="mono" style="color:#ff6b6b">0x001E (+30)</td>
+        <td class="mono" style="color:#4ecca3">0xFFFE (−2)</td>
+      </tr>
+      <tr>
+        <td>+15</td>
+        <td class="mono">01111</td>
+        <td class="mono" style="color:#4ecca3">0x000F (+15)</td>
+        <td class="mono" style="color:#4ecca3">0x000F (+15)</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<h3>Correção — processador6.vhd:133</h3>
+<pre><span class="cm">-- ANTES (bug): sempre prepend zeros → constante negativa vira positiva</span>
+<span class="sig">cte_ext_s</span> <span class="kw">&lt;=</span> <span class="str">"00000000000"</span> <span class="kw">&</span> ir_out_s(<span class="num">4</span> <span class="kw">downto</span> <span class="num">0</span>);
+
+<span class="cm">-- DEPOIS (correto): replica bit[4] nos 11 bits superiores</span>
+<span class="sig">cte_ext_s</span> <span class="kw">&lt;=</span> <span class="str">"11111111111"</span> <span class="kw">&</span> ir_out_s(<span class="num">4</span> <span class="kw">downto</span> <span class="num">0</span>) <span class="kw">when</span> ir_out_s(<span class="num">4</span>) = <span class="str">'1'</span>
+             <span class="kw">else</span> <span class="str">"00000000000"</span> <span class="kw">&</span> ir_out_s(<span class="num">4</span> <span class="kw">downto</span> <span class="num">0</span>);</pre>
+
+<!-- BUG 2 -->
+<h3>Bug 2 — Constante 30 não representável em 5 bits com sinal (rom.vhd)</h3>
+
+<div class="panel panel-bug">
+  <h4>Sintoma após corrigir o Bug 1</h4>
+  <p>
+    R3 passou a incrementar corretamente (0, 1, 2, …), mas <strong>R4 ficava em 0</strong>
+    e o loop nunca terminava (loop infinito). A instrução de comparação estava calculando
+    o valor errado.
+  </p>
+</div>
+
+<p>
+  A instrução original era <span class="mono">SUBI R0, R3, 30</span> codificada como
+  <span class="mono">001100001111110</span>. O campo cte5 = <span class="mono">11110</span>
+  que em 5 bits com sinal vale <strong>−2</strong> (não +30).
+</p>
+<p>
+  Após o Bug 1 ser corrigido, o SUBI passou a calcular corretamente usando extensão de sinal:
+  <strong>R0 = R3 − (−2) = R3 + 2</strong>. Para R3 ≥ 0, R0 sempre é positivo → BLE nunca dispara → loop infinito.
+</p>
+
+<div class="panel panel-info">
+  <h4>Por que 30 não cabe em 5 bits com sinal?</h4>
+  <p>
+    5 bits com sinal representam de −16 a +15. O valor 30 exigiria pelo menos 6 bits com sinal
+    (range: −32 a +31). Qualquer constante acima de +15 é impossível de codificar diretamente.
+    A solução é usar <em>duas instruções</em> somando constantes menores.
+  </p>
+</div>
+
+<h3>Correção — rom.vhd endereços 4–7</h3>
+<pre><span class="cm">-- ANTES (bug): cte5=11110 = -2 com sinal → compara com -2, não 30</span>
+<span class="num">4</span> <span class="kw">=></span> <span class="str">"001100001111110"</span>,  <span class="cm">-- SUBI R0, R3, 30  (BUG: cte5=11110=-2)</span>
+<span class="num">5</span> <span class="kw">=></span> <span class="str">"010100000000010"</span>,  <span class="cm">-- BLE  2</span>
+<span class="num">6</span> <span class="kw">=></span> <span class="str">"010010110000000"</span>,  <span class="cm">-- MOV  R5, R4</span>
+
+<span class="cm">-- DEPOIS (correto): 29 = 15+14; compara R3 com 29 → BLE ≡ R3&lt;30</span>
+<span class="num">4</span> <span class="kw">=></span> <span class="str">"001100001101111"</span>,  <span class="cm">-- SUBI R0, R3, 15  (R0 = R3-15)</span>
+<span class="num">5</span> <span class="kw">=></span> <span class="str">"001100000001110"</span>,  <span class="cm">-- SUBI R0, R0, 14  (R0 = R3-29)</span>
+<span class="num">6</span> <span class="kw">=></span> <span class="str">"010100000000010"</span>,  <span class="cm">-- BLE  2</span>
+<span class="num">7</span> <span class="kw">=></span> <span class="str">"010010110000000"</span>,  <span class="cm">-- MOV  R5, R4</span></pre>
+
+<!-- BUG 3 -->
+<h3>Bug 3 — Flush dispara no estado errado do pipeline (uc6.vhd)</h3>
+
+<div class="panel panel-bug">
+  <h4>Sintoma após corrigir os Bugs 1 e 2</h4>
+  <p>
+    R3 incrementava corretamente, mas <strong>R4 ficava permanentemente em 0</strong>.
+    A instrução ADD (end 2) <em>nunca era executada</em> — o MOV do fim do loop (end 7)
+    executava no lugar da ADD a cada iteração.
+  </p>
+</div>
+
+<p>
+  Este é o bug mais sutil. Para entendê-lo é necessário traçar o pipeline ciclo a ciclo.
+</p>
+
+<h3>Como funciona o flush (conceito correto)</h3>
+<p>
+  Quando um branch é tomado, a instrução <em>seguinte</em> ao branch já foi buscada da ROM
+  (por causa da latência de 1 ciclo). Essa instrução não deve ser executada.
+  O flush force <span class="mono">ir_in = 0</span> (NOP) para descartar essa instrução espúria.
+</p>
+<p>
+  <strong>Chave:</strong> O IR só grava (<span class="mono">wr_en_ir = 1</span>) no <strong>estado 00</strong>.
+  Portanto, o flush só tem efeito se estiver ativo durante o estado 00.
+</p>
+
+<h3>O Bug: flush ativado no estado 10 (wr_en_ir = 0 lá!)</h3>
+<pre><span class="cm">-- CÓDIGO COM BUG: flush em estado=10, mas wr_en_ir=0 no estado 10!</span>
+<span class="sig">flush_o</span> <span class="kw">&lt;=</span> <span class="str">'1'</span> <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> is_jmp_s = <span class="str">'1'</span>) <span class="kw">else</span>
+           <span class="str">'1'</span> <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> branch_taken_s = <span class="str">'1'</span>) <span class="kw">else</span>
+           <span class="str">'0'</span>;</pre>
+
+<p>
+  Quando o estado muda para 00 (onde o IR de fato grava), o flush já estava em 0.
+  O IR gravava a instrução espúria vinda da ROM.
+</p>
+
+<h3>Diagrama de temporização do Bug 3 (BLE em addr=6, target=2)</h3>
+<div class="timing">
+<span class="t-label">                  Execute BLE (estado=10) │ Fetch pós-BLE (00→01) │ Decode (01→10)</span>
+──────────────────────────────────────────┼───────────────────────┼───────────────────
+<span class="t-label">PC (antes borda)  7                       │ 1 (=target-1)         │ 1</span>
+<span class="t-label">ROM captura addr  7 ← ainda é o addr 7!  │ 1 (NOP area)          │ 1</span>
+<span class="t-label">ROM saída (dado)  conteudo_rom(7)=MOV     │</span><span class="t-ok"> NOP (correto)         │</span><span class="t-ok"> NOP</span>
+──────────────────────────────────────────┼───────────────────────┼───────────────────
+<span class="t-bad">flush (bug):      1 (INÚTIL! wr_en_ir=0) │ 0 ← flush sumiu!      │ 0</span>
+<span class="t-label">wr_en_ir          0                       │</span><span class="t-bad"> 1 ← IR VAI GRAVAR     │ 0</span>
+<span class="t-label">ir_in_s           MOV (ignorado)          │</span><span class="t-bad"> MOV ← INSTRUÇÃO ERRADA│</span>
+──────────────────────────────────────────┼───────────────────────┼───────────────────
+<span class="t-label">IR (após borda)   BLE (não mudou)        │</span><span class="t-bad"> MOV ← BUG!            │ MOV</span>
+<span class="t-label">Efeito:           branch tomado OK       │ NOP deveria ser gravado│ MOV executa!</span>
+</div>
+
+<p>
+  O resultado: em cada iteração do loop, a instrução <strong>MOV R5, R4</strong> executava
+  (no lugar do NOP de flush), e a instrução <strong>ADD R4, R3, R4</strong> era pulada completamente.
+  Por isso R4 nunca acumulava nada.
+</p>
+
+<h3>Correção — uc6.vhd: flush no estado 00</h3>
+
+<div class="panel panel-info">
+  <h4>Por que o estado=00 funciona?</h4>
+  <p>
+    Após o execute do BLE (estado 10 → 00), o IR <em>ainda contém o opcode BLE</em>
+    (wr_en_ir foi 0 durante o execute). No estado 00, <strong>is_ble=1 e branch_taken=1</strong>
+    continuam válidos porque IR ainda não foi sobrescrito. Assim, ativar o flush em estado=00
+    funciona: wr_en_ir=1 e flush=1 → ir_in=0 → IR grava NOP ✓
+  </p>
+</div>
+
+<pre><span class="cm">-- DEPOIS (correto): flush em estado=00, onde wr_en_ir=1</span>
+<span class="sig">flush_o</span> <span class="kw">&lt;=</span> <span class="str">'1'</span> <span class="kw">when</span> (estado_s = <span class="str">"00"</span> <span class="kw">and</span> is_jmp_s = <span class="str">'1'</span>) <span class="kw">else</span>
+           <span class="str">'1'</span> <span class="kw">when</span> (estado_s = <span class="str">"00"</span> <span class="kw">and</span> branch_taken_s = <span class="str">'1'</span>) <span class="kw">else</span>
+           <span class="str">'0'</span>;</pre>
+
+<h3>Ajuste necessário no PC — target − 1</h3>
+<p>
+  O flush insere um NOP que precisa passar pelos estados 01 e 10. No estado 01, o PC sempre
+  incrementa <strong>+1</strong>. Se o branch saltasse diretamente para o endereço 2, depois do NOP
+  o PC seria 3, pulando a instrução em 2.
+</p>
+<p>
+  A solução: armazenar o destino como <strong>target − 1</strong>. O NOP de bolha incrementa
+  PC de target−1 para target. Resultado: a instrução correta é buscada.
+</p>
+
+<pre><span class="cm">-- ANTES: PC vai direto para addr_abs_s</span>
+<span class="sig">pc_next_o</span> <span class="kw">&lt;=</span> (pc_i + <span class="num">1</span>)        <span class="kw">when</span> estado_s = <span class="str">"01"</span> <span class="kw">else</span>
+             (pc_i + offset_s) <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> is_jmp_s = <span class="str">'1'</span>) <span class="kw">else</span>
+             addr_abs_s        <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> branch_taken_s = <span class="str">'1'</span>) <span class="kw">else</span>
+             pc_i;
+
+<span class="cm">-- DEPOIS: target-1 compensa o +1 do NOP de bolha no estado 01</span>
+<span class="sig">pc_next_o</span> <span class="kw">&lt;=</span> (pc_i + <span class="num">1</span>)            <span class="kw">when</span> estado_s = <span class="str">"01"</span> <span class="kw">else</span>
+             (pc_i + offset_s - <span class="num">1</span>) <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> is_jmp_s = <span class="str">'1'</span>) <span class="kw">else</span>
+             (addr_abs_s - <span class="num">1</span>)      <span class="kw">when</span> (estado_s = <span class="str">"10"</span> <span class="kw">and</span> branch_taken_s = <span class="str">'1'</span>) <span class="kw">else</span>
+             pc_i;</pre>
+
+<h3>Diagrama de temporização após a correção do Bug 3 (BLE addr=6, target=2)</h3>
+<div class="timing">
+<span class="t-label">               Execute BLE (10→00) │ Fetch/Flush (00→01)  │ Decode NOP (01→10) │ Execute NOP │ Fetch correto</span>
+────────────────────────────────────┼──────────────────────┼────────────────────┼─────────────┼──────────────────
+<span class="t-label">PC (antes borda) 7                  │ 1 (=target-1)        │ 1                  │ 2           │ 2</span>
+<span class="t-label">ROM captura      7                  │ 1 (NOP area)         │ 1                  │ 2           │ 2</span>
+<span class="t-label">ROM saída        rom[7]=MOV         │ rom[1]=NOP           │ rom[1]=NOP         │</span><span class="t-ok"> rom[2]=ADD  │</span><span class="t-ok"> rom[2]</span>
+────────────────────────────────────┼──────────────────────┼────────────────────┼─────────────┼──────────────────
+<span class="t-fix">flush (novo):    0                  │ 1 (is_ble, est=00)   │ 0                  │ 0           │ 0</span>
+<span class="t-label">wr_en_ir         0                  │ 1                    │ 0                  │ 0           │ 1</span>
+<span class="t-label">ir_in_s          MOV (ignorado)     │</span><span class="t-ok"> 0 = NOP forçado      │ –                  │ –           │</span><span class="t-ok"> ADD</span>
+────────────────────────────────────┼──────────────────────┼────────────────────┼─────────────┼──────────────────
+<span class="t-label">IR (após borda)  BLE                │</span><span class="t-ok"> NOP (bolha)          │ NOP                │ NOP         │</span><span class="t-ok"> ADD R4,R3,R4 ✓</span>
+<span class="t-label">PC (após borda)  1                  │ 1                    │ 2 ✓                │ 2           │ 2</span>
+</div>
+
+<h3>Verificação do alvo do BLE</h3>
+<table>
+  <tr><th>Branch</th><th>Addr</th><th>PC no execute</th><th>addr_abs</th><th>PC gravado</th><th>PC após NOP (decode)</th><th>Instrução buscada</th></tr>
+  <tr>
+    <td class="mono">BLE 2</td>
+    <td>6</td>
+    <td>7</td>
+    <td>2</td>
+    <td class="mono" style="color:#ffd166">2−1 = 1</td>
+    <td class="mono" style="color:#4ecca3">1+1 = <strong>2</strong> ✓</td>
+    <td>ADD R4, R3, R4 ✓</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════ 8. RESUMO DOS 3 BUGS ═══════════════════════════════ -->
+<h2>8 · Resumo dos 3 Bugs e Correções</h2>
+
+<ul class="steps">
+  <li><span class="step-bug">1</span>
+    <div>
+      <strong>Bug 1 — Zero-extension (processador6.vhd:133)</strong><br>
+      <em>Causa:</em> cte_ext_s usava zero-extension; constante −1 (11111) tornava-se +31.<br>
+      <em>Efeito:</em> R3 decrementava 31 por iteração.<br>
+      <em>Fix:</em> Extensão de sinal condicional replicando bit[4].
+    </div>
+  </li>
+  <li><span class="step-bug">2</span>
+    <div>
+      <strong>Bug 2 — Constante inválida 30 em cte5 (rom.vhd)</strong><br>
+      <em>Causa:</em> SUBI R0, R3, 30 codificava cte5=11110=−2; após Bug 1 fixado, comparava R3 com −2.<br>
+      <em>Efeito:</em> BLE nunca disparava → loop infinito.<br>
+      <em>Fix:</em> Duas instruções SUBI de +15 e +14 (total 29) para comparar R3&lt;30; BLE e MOV deslocados em 1 endereço.
+    </div>
+  </li>
+  <li><span class="step-bug">3</span>
+    <div>
+      <strong>Bug 3 — Flush no estado errado (uc6.vhd)</strong><br>
+      <em>Causa:</em> flush ativado em estado=10, mas wr_en_ir=0 lá; em estado=00 (onde IR grava), flush já era 0.<br>
+      <em>Efeito:</em> Instrução espúria (MOV) gravada no IR; ADD nunca executava; R4 ficava em 0.<br>
+      <em>Fix:</em> Mover flush para estado=00; ajustar PC de branch para target−1 para compensar bolha NOP.
+    </div>
+  </li>
+</ul>
+
+<!-- ═══════════════════════════════ 9. VERIFICAÇÃO ═══════════════════════════════ -->
+<h2>9 · Verificação — O que Esperar no GTKWave</h2>
+
+<p>
+  Após todas as correções, a simulação produz <span class="mono">result_proc.ghw</span>.
+  No GTKWave, adicione os sinais nesta ordem:
+</p>
+
+<div class="highlight-box">
+  <strong>rst, clk, estado_o, pc_o, instr_o, ula_out_o</strong><br>
+  e dentro do banco de registradores (via hierarquia):<br>
+  <strong>q_r0, q_r3, q_r4, q_r5</strong>
+</div>
+
+<h3>Comportamento esperado por fase</h3>
+<table>
+  <tr><th>Sinal</th><th>Fase inicial (LD)</th><th>Durante o loop (30 iterações)</th><th>Ao final</th></tr>
+  <tr>
+    <td class="mono" style="color:#4ecca3">q_r3</td>
+    <td>0x0000</td>
+    <td>Incrementa: 0001, 0002, …, 001E</td>
+    <td><strong>0x001E = 30</strong></td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ffd166">q_r4</td>
+    <td>0x0000</td>
+    <td>Acumula: 0001, 0003, 0006, …, 01B3</td>
+    <td><strong>0x01B3 = 435</strong></td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#ff7eb3">q_r5</td>
+    <td>0x0000</td>
+    <td>Sem alteração (0x0000)</td>
+    <td><strong>0x01B3 = 435</strong> (após MOV)</td>
+  </tr>
+  <tr>
+    <td class="mono" style="color:#9fa8da">q_r0</td>
+    <td>0x0000</td>
+    <td>Varia: resultado de R3−29 (-29, -28, …, 0, 1)</td>
+    <td>0x0001 (R3−29 = 30−29 = 1)</td>
+  </tr>
+</table>
+
+<h3>Verificação da soma</h3>
+<div class="panel panel-fix">
+  <h4>Cálculo manual da soma esperada</h4>
+  <p>
+    Σ i para i = 0 a 29 = 29 × 30 / 2 = <strong>435 = 0x01B3</strong><br><br>
+    Iteração por iteração (R3 no ADD → R4 após ADD):<br>
+    i=0: R4 = 0+0 = 0 | i=1: R4 = 0+1 = 1 | i=2: R4 = 1+2 = 3 | i=3: R4 = 3+3 = 6 | …<br>
+    i=28: R4 = 378+28 = 406 | i=29: R4 = 406+29 = <strong>435</strong> ✓<br>
+    (quando R3 incrementa para 30, a condição R3&lt;30 falha e o loop encerra)
+  </p>
+</div>
+
+<!-- ═══════════════════════════════ 10. COMPILAR ═══════════════════════════════ -->
+<h2>10 · Como Compilar e Simular</h2>
+
+<pre><span class="cm"># Dentro da pasta LAB6:</span>
+make clean   <span class="cm"># remove objetos antigos</span>
+make         <span class="cm"># analisa, elabora e simula (gera result_proc.ghw)</span>
+
+<span class="cm"># Ver formas de onda:</span>
+gtkwave result_proc.ghw &amp;
+
+<span class="cm"># Ou manualmente:</span>
+ghdl -a *.vhd
+ghdl -e processador_tb
+ghdl -r processador_tb --wave=result_proc.ghw</pre>
+
+<h3>Checklist do enunciado</h3>
+<table>
+  <tr><th>Critério</th><th>Status</th></tr>
+  <tr><td>ROM síncrona (rising_edge)</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>IR com wr_en apenas no estado 00</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>PC+1 gravado no estado 01</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>Branches executados no estado 10</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>Extensão de sinal correta para cte5</td><td><span class="badge-ok">OK</span> — Bug 1 corrigido</td></tr>
+  <tr><td>Comparação R3&lt;30 correta</td><td><span class="badge-ok">OK</span> — SUBI R0,R3,15 + SUBI R0,R0,14 = R3−29; BLE ≡ R3&lt;30</td></tr>
+  <tr><td>Flush no ciclo correto (estado=00)</td><td><span class="badge-ok">OK</span> — Bug 3 corrigido</td></tr>
+  <tr><td>Instrução seguinte ao branch NÃO executa</td><td><span class="badge-ok">OK</span> — NOP de bolha inserido</td></tr>
+  <tr><td>R3 = 30 (0x001E) ao final</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>R4 = 435 (0x01B3) ao final</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>R5 = 435 (0x01B3) ao final</td><td><span class="badge-ok">OK</span></td></tr>
+  <tr><td>Flags BLE e BCC com flip-flops separados</td><td><span class="badge-ok">OK</span> — reg1bit instanciados no top-level</td></tr>
+  <tr><td>Listagem assembly nos comentários da ROM</td><td><span class="badge-ok">OK</span></td></tr>
+</table>
+
+</div><!-- .page -->
+
+<div class="footer">
+  LAB6 · µProcessador 6 "Somador de Loop" · UTFPR · Arquitetura de Computadores<br>
+  3 bugs corrigidos: sign-extension · constante 5 bits · flush de branch no estado correto<br>
+  Resultado final verificado: R3=0x001E, R4=0x01B3, R5=0x01B3
+</div>
+
+</body>
+</html>
