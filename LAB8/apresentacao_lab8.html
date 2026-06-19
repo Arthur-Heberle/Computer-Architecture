@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAB8 - Microprocessador com RAM, DJNZ e Crivo</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --bg2:      #191d2a;
+    --bg3:      #242a3d;
+    --panel:    #151924;
+    --code-bg:  #10141e;
+    --text:     #eceff8;
+    --subtext:  #aab3d1;
+    --muted:    #7883a4;
+    --border:   #303752;
+    --rom:      #78a6ff;
+    --ram:      #4fd6a2;
+    --ctrl:     #ffd166;
+    --alu:      #ff7eb3;
+    --danger:   #ff6b6b;
+    --violet:   #b39ddb;
+    --wire:     #54627f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background:
+      radial-gradient(circle at 12% 0%, rgba(79, 214, 162, .08), transparent 28rem),
+      radial-gradient(circle at 88% 4%, rgba(255, 126, 179, .08), transparent 30rem),
+      var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  a { color: var(--rom); }
+  strong { color: #fff; }
+  .mono, code {
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: .94em;
+  }
+
+  .hero {
+    min-height: 88vh;
+    display: grid;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding: 48px 24px 38px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-inner {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+    gap: 40px;
+    align-items: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--ram);
+    border: 1px solid rgba(79, 214, 162, .42);
+    background: rgba(79, 214, 162, .08);
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: clamp(2.35rem, 6vw, 5.1rem);
+    line-height: 1.02;
+    font-weight: 850;
+    max-width: 840px;
+    letter-spacing: 0;
+  }
+  .hero h1 span { color: var(--ram); }
+  .hero p {
+    margin-top: 20px;
+    max-width: 690px;
+    color: var(--subtext);
+    font-size: 1.08rem;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+    max-width: 660px;
+  }
+  .stat {
+    border: 1px solid var(--border);
+    background: rgba(21, 25, 36, .72);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat strong {
+    display: block;
+    color: var(--ctrl);
+    font-size: 1.35rem;
+    line-height: 1.1;
+  }
+  .stat span {
+    color: var(--muted);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .sieve-card {
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(25, 29, 42, .98), rgba(16, 20, 30, .98));
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
+  }
+  .sieve-card h2 {
+    color: var(--ram);
+    font-size: .95rem;
+    text-transform: uppercase;
+    letter-spacing: 1.7px;
+    margin-bottom: 14px;
+  }
+  .sieve-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(42px, 1fr));
+    gap: 8px;
+  }
+  .cell {
+    min-height: 45px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-weight: 800;
+    border: 1px solid var(--border);
+  }
+  .prime {
+    color: #07120e;
+    background: var(--ram);
+    border-color: #8ff0ca;
+  }
+  .zero {
+    color: var(--muted);
+    background: rgba(120, 131, 164, .08);
+    text-decoration: line-through;
+  }
+  .unused {
+    color: var(--muted);
+    background: rgba(120, 166, 255, .08);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: .82rem;
+  }
+  .legend span::before {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 7px;
+    vertical-align: -1px;
+  }
+  .legend .l-prime::before { background: var(--ram); }
+  .legend .l-zero::before { background: rgba(120, 131, 164, .35); }
+
+  .page {
+    width: min(1120px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 48px 0 82px;
+  }
+  h2.section-title {
+    color: var(--rom);
+    border-left: 4px solid var(--rom);
+    padding-left: 14px;
+    margin: 52px 0 22px;
+    font-size: 1.55rem;
+    line-height: 1.25;
+  }
+  h3 {
+    color: var(--ctrl);
+    margin: 28px 0 12px;
+    font-size: 1.08rem;
+  }
+  p { color: #cbd2ec; margin-bottom: 12px; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin: 18px 0;
+  }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+  }
+  .card .tag {
+    display: inline-block;
+    margin-bottom: 9px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .tag-rom { color: var(--rom); }
+  .tag-ram { color: var(--ram); }
+  .tag-ctrl { color: var(--ctrl); }
+  .tag-alu { color: var(--alu); }
+  .tag-danger { color: var(--danger); }
+  .card h4 { font-size: 1rem; margin-bottom: 7px; color: #fff; }
+  .card p { color: var(--subtext); font-size: .88rem; margin: 0; }
+
+  .diagram-wrap, .panel, .wave-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  .panel {
+    border-left: 5px solid var(--rom);
+  }
+  .panel.ram { border-left-color: var(--ram); }
+  .panel.ctrl { border-left-color: var(--ctrl); }
+  .panel.danger { border-left-color: var(--danger); }
+  .panel h4 {
+    color: #fff;
+    margin-bottom: 8px;
+    font-size: .98rem;
+  }
+  .panel p { color: var(--subtext); font-size: .92rem; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 14px 0;
+    color: var(--text);
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: .84rem;
+    line-height: 1.62;
+  }
+  .cm { color: #70809f; font-style: italic; }
+  .kw { color: var(--rom); }
+  .num { color: var(--ctrl); }
+  .sig { color: var(--alu); }
+  .str { color: var(--ram); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: .89rem;
+  }
+  th {
+    text-align: left;
+    color: var(--rom);
+    background: var(--bg3);
+    border-bottom: 2px solid var(--rom);
+    padding: 10px 12px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    font-size: .78rem;
+  }
+  td {
+    color: #cbd2ec;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(120, 166, 255, .06); }
+  .ok {
+    color: var(--ram);
+    font-weight: 800;
+  }
+  .warn {
+    color: var(--ctrl);
+    font-weight: 800;
+  }
+
+  .instr-bits {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr .85fr .85fr 1fr;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+    border: 1px solid var(--border);
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  .bit {
+    min-width: 92px;
+    border-right: 1px solid var(--bg);
+    text-align: center;
+  }
+  .bit:last-child { border-right: none; }
+  .bit b {
+    display: block;
+    padding: 9px 5px 7px;
+    font-size: .82rem;
+  }
+  .bit span {
+    display: block;
+    padding: 5px;
+    background: rgba(255,255,255,.03);
+    color: var(--muted);
+    font-size: .72rem;
+  }
+  .b-op b { color: var(--rom); background: rgba(120, 166, 255, .12); }
+  .b-rd b { color: var(--ram); background: rgba(79, 214, 162, .12); }
+  .b-r1 b { color: var(--ctrl); background: rgba(255, 209, 102, .12); }
+  .b-r2 b { color: var(--alu); background: rgba(255, 126, 179, .12); }
+  .b-ct b { color: var(--violet); background: rgba(179, 157, 219, .12); }
+
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+  }
+  .flow-step {
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    border-radius: 8px;
+    padding: 14px;
+    position: relative;
+  }
+  .flow-step::after {
+    content: ">";
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--wire);
+    font-weight: 800;
+  }
+  .flow-step:last-child::after { content: ""; }
+  .flow-step b {
+    display: block;
+    color: var(--ram);
+    margin-bottom: 5px;
+  }
+  .flow-step span { color: var(--subtext); font-size: .86rem; }
+
+  .wave {
+    min-width: 780px;
+    display: grid;
+    grid-template-columns: 98px repeat(15, 1fr);
+    align-items: stretch;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: .76rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .wave div {
+    padding: 7px 8px;
+    border-right: 1px solid rgba(255,255,255,.05);
+    border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .wave .label {
+    color: var(--muted);
+    background: rgba(255,255,255,.04);
+    font-weight: 800;
+  }
+  .wave .pc { color: var(--rom); }
+  .wave .state { color: var(--ctrl); }
+  .wave .r1 { color: var(--ram); }
+  .wave .zero { color: var(--muted); text-decoration: none; background: transparent; }
+  .wave .hit { background: rgba(79, 214, 162, .13); color: var(--ram); }
+
+  .checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+  }
+  .check {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 13px;
+    background: var(--bg2);
+    color: #dbe1f7;
+    font-size: .88rem;
+  }
+  .check::before {
+    content: "OK";
+    color: var(--ram);
+    font-weight: 900;
+    margin-right: 8px;
+    font-size: .78rem;
+  }
+
+  svg text {
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  .footer {
+    text-align: center;
+    border-top: 1px solid var(--border);
+    padding: 36px 20px;
+    color: var(--muted);
+    font-size: .84rem;
+  }
+
+  @media (max-width: 850px) {
+    .hero { min-height: auto; }
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-stats { grid-template-columns: 1fr; }
+    .page { width: min(100% - 28px, 1120px); }
+    .flow { grid-template-columns: 1fr; }
+    .flow-step::after { content: ""; }
+    .instr-bits { overflow-x: auto; }
+    .sieve-grid { grid-template-columns: repeat(5, minmax(38px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="badge">UTFPR · Arquitetura de Computadores · LAB8</div>
+      <h1>Microprocessador com <span>RAM, DJNZ e crivo</span></h1>
+      <p>
+        Explicação da arquitetura final: ROM síncrona, unidade de controle em 3 estados,
+        RAM, banco de registradores, ULA com flags e o programa de validação que marca
+        compostos para exibir os primos até 32.
+      </p>
+      <div class="hero-stats">
+        <div class="stat"><strong>15 bits</strong><span>instrução</span></div>
+        <div class="stat"><strong>8 x 16</strong><span>registradores</span></div>
+        <div class="stat"><strong>31 leituras</strong><span>RAM[2..32]</span></div>
+      </div>
+    </div>
+
+    <div class="sieve-card" aria-label="Resultado visual do crivo">
+      <h2>Resultado esperado na RAM</h2>
+      <div class="sieve-grid">
+        <div class="unused">0</div><div class="unused">1</div>
+        <div class="cell prime">2</div><div class="cell prime">3</div>
+        <div class="cell zero">4</div><div class="cell prime">5</div>
+        <div class="cell zero">6</div><div class="cell prime">7</div>
+        <div class="cell zero">8</div><div class="cell zero">9</div>
+        <div class="cell zero">10</div><div class="cell prime">11</div>
+        <div class="cell zero">12</div><div class="cell prime">13</div>
+        <div class="cell zero">14</div><div class="cell zero">15</div>
+        <div class="cell zero">16</div><div class="cell prime">17</div>
+        <div class="cell zero">18</div><div class="cell prime">19</div>
+        <div class="cell zero">20</div><div class="cell zero">21</div>
+        <div class="cell zero">22</div><div class="cell prime">23</div>
+        <div class="cell zero">24</div><div class="cell zero">25</div>
+        <div class="cell zero">26</div><div class="cell zero">27</div>
+        <div class="cell zero">28</div><div class="cell prime">29</div>
+        <div class="cell zero">30</div><div class="cell prime">31</div>
+        <div class="cell zero">32</div>
+      </div>
+      <div class="legend">
+        <span class="l-prime">primos permanecem gravados</span>
+        <span class="l-zero">compostos viram zero</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="section-title">1 · O que o LAB8 adiciona</h2>
+<p>
+  O LAB8 parte do processador dos labs anteriores e adiciona o uso real de memória de dados.
+  O programa não calcula apenas dentro dos registradores: ele preenche a RAM, marca valores
+  compostos com zero e depois lê a tabela pronta.
+</p>
+
+<div class="cards">
+  <div class="card">
+    <span class="tag tag-ram">RAM</span>
+    <h4>Memória de dados</h4>
+    <p>Guarda a tabela do crivo. Endereço e dado são escolhidos por registradores do banco.</p>
+  </div>
+  <div class="card">
+    <span class="tag tag-ctrl">DJNZ</span>
+    <h4>Loop regressivo</h4>
+    <p>Decrementa o contador e salta se o resultado ainda não é zero.</p>
+  </div>
+  <div class="card">
+    <span class="tag tag-danger">exception_o</span>
+    <h4>Validação de ROM</h4>
+    <p>Sinal de exceção no top level, usado para indicar execução fora do espaço válido.</p>
+  </div>
+  <div class="card">
+    <span class="tag tag-alu">Flags</span>
+    <h4>Controle por resultado</h4>
+    <p>A ULA gera Zero, BLE e BCC; a UC usa a Zero flag registrada para decidir o DJNZ.</p>
+  </div>
+</div>
+
+<div class="panel ram">
+  <h4>Resultado observado na simulação</h4>
+  <p>
+    O testbench imprime a sequência lida de <code>R1</code> durante a fase final:
+    <code>2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, ... 29, 0, 31, 0</code>.
+    Os zeros são os compostos que o programa marcou na RAM.
+  </p>
+</div>
+
+<h2 class="section-title">2 · Diagrama de blocos</h2>
+<div class="diagram-wrap">
+  <svg viewBox="0 0 1010 470" width="100%" style="max-width:1010px; display:block; margin:auto;">
+    <defs>
+      <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#78a6ff"/>
+      </marker>
+      <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#4fd6a2"/>
+      </marker>
+      <marker id="arrow-yellow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ffd166"/>
+      </marker>
+      <marker id="arrow-pink" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ff7eb3"/>
+      </marker>
+    </defs>
+
+    <rect x="30" y="56" width="122" height="64" rx="8" fill="#142238" stroke="#78a6ff"/>
+    <text x="91" y="81" text-anchor="middle" fill="#78a6ff" font-size="13" font-weight="700">pc.vhd</text>
+    <text x="91" y="101" text-anchor="middle" fill="#aab3d1" font-size="10">PC 7 bits</text>
+
+    <rect x="30" y="172" width="122" height="64" rx="8" fill="#142238" stroke="#78a6ff"/>
+    <text x="91" y="197" text-anchor="middle" fill="#78a6ff" font-size="13" font-weight="700">rom.vhd</text>
+    <text x="91" y="217" text-anchor="middle" fill="#aab3d1" font-size="10">128 x 15 bits</text>
+    <line x1="91" y1="120" x2="91" y2="172" stroke="#78a6ff" marker-end="url(#arrow-blue)"/>
+
+    <rect x="206" y="172" width="122" height="64" rx="8" fill="#2a1827" stroke="#ff7eb3"/>
+    <text x="267" y="197" text-anchor="middle" fill="#ff7eb3" font-size="13" font-weight="700">ir.vhd</text>
+    <text x="267" y="217" text-anchor="middle" fill="#aab3d1" font-size="10">instrucao atual</text>
+    <line x1="152" y1="204" x2="206" y2="204" stroke="#78a6ff" marker-end="url(#arrow-blue)"/>
+
+    <rect x="398" y="128" width="168" height="132" rx="8" fill="#24200f" stroke="#ffd166"/>
+    <text x="482" y="154" text-anchor="middle" fill="#ffd166" font-size="13" font-weight="700">uc8.vhd</text>
+    <text x="482" y="176" text-anchor="middle" fill="#aab3d1" font-size="10">decodifica opcode</text>
+    <text x="482" y="193" text-anchor="middle" fill="#aab3d1" font-size="10">gera wr_en e muxes</text>
+    <text x="482" y="210" text-anchor="middle" fill="#aab3d1" font-size="10">controla PC e flush</text>
+    <text x="482" y="229" text-anchor="middle" fill="#4fd6a2" font-size="10">DJNZ + exception_o</text>
+    <line x1="328" y1="204" x2="398" y2="204" stroke="#ff7eb3" marker-end="url(#arrow-pink)"/>
+
+    <rect x="398" y="314" width="168" height="58" rx="8" fill="#151924" stroke="#54627f"/>
+    <text x="482" y="339" text-anchor="middle" fill="#aab3d1" font-size="12" font-weight="700">maq_estados.vhd</text>
+    <text x="482" y="357" text-anchor="middle" fill="#7883a4" font-size="10">00 -> 01 -> 10</text>
+    <line x1="482" y1="314" x2="482" y2="260" stroke="#54627f" marker-end="url(#arrow-yellow)"/>
+
+    <rect x="642" y="70" width="146" height="76" rx="8" fill="#182b24" stroke="#4fd6a2"/>
+    <text x="715" y="96" text-anchor="middle" fill="#4fd6a2" font-size="13" font-weight="700">banco_regs.vhd</text>
+    <text x="715" y="117" text-anchor="middle" fill="#aab3d1" font-size="10">R0..R7, 16 bits</text>
+    <text x="715" y="132" text-anchor="middle" fill="#aab3d1" font-size="10">q_r1 / q_r6 no GTKWave</text>
+
+    <rect x="642" y="214" width="146" height="76" rx="8" fill="#2a1827" stroke="#ff7eb3"/>
+    <text x="715" y="241" text-anchor="middle" fill="#ff7eb3" font-size="13" font-weight="700">ULA.vhd</text>
+    <text x="715" y="261" text-anchor="middle" fill="#aab3d1" font-size="10">ADD / SUB / AND / OR</text>
+    <text x="715" y="276" text-anchor="middle" fill="#aab3d1" font-size="10">Z, BLE, BCC</text>
+
+    <rect x="840" y="214" width="136" height="76" rx="8" fill="#182b24" stroke="#4fd6a2"/>
+    <text x="908" y="241" text-anchor="middle" fill="#4fd6a2" font-size="13" font-weight="700">ram.vhd</text>
+    <text x="908" y="261" text-anchor="middle" fill="#aab3d1" font-size="10">128 x 16 bits</text>
+    <text x="908" y="276" text-anchor="middle" fill="#aab3d1" font-size="10">SW / LW</text>
+
+    <rect x="642" y="350" width="146" height="54" rx="8" fill="#182018" stroke="#4fd6a2"/>
+    <text x="715" y="374" text-anchor="middle" fill="#4fd6a2" font-size="12" font-weight="700">reg1bit flags</text>
+    <text x="715" y="392" text-anchor="middle" fill="#aab3d1" font-size="10">flag_ble, flag_bcc, flag_z</text>
+
+    <line x1="566" y1="150" x2="642" y2="108" stroke="#ffd166" stroke-dasharray="5,3" marker-end="url(#arrow-yellow)"/>
+    <text x="579" y="122" fill="#ffd166" font-size="9">reg_wr/r1/r2</text>
+    <line x1="715" y1="146" x2="715" y2="214" stroke="#ff7eb3" marker-end="url(#arrow-pink)"/>
+    <text x="724" y="184" fill="#ff7eb3" font-size="9">operandos</text>
+    <path d="M 788 246 C 812 238, 824 238, 840 246" fill="none" stroke="#4fd6a2" marker-end="url(#arrow-green)"/>
+    <text x="804" y="230" fill="#4fd6a2" font-size="9">end/dado</text>
+    <path d="M 840 270 C 814 304, 752 330, 716 290" fill="none" stroke="#4fd6a2" marker-end="url(#arrow-green)"/>
+    <text x="792" y="324" fill="#4fd6a2" font-size="9">ram_out -> data_wr</text>
+    <path d="M 788 226 C 826 170, 826 92, 788 94" fill="none" stroke="#4fd6a2" marker-end="url(#arrow-green)"/>
+    <text x="830" y="162" fill="#4fd6a2" font-size="9">ula_out -> banco</text>
+    <line x1="715" y1="290" x2="715" y2="350" stroke="#4fd6a2" marker-end="url(#arrow-green)"/>
+    <path d="M 642 379 C 594 378, 584 260, 566 238" fill="none" stroke="#4fd6a2" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+    <text x="585" y="336" fill="#4fd6a2" font-size="9">flags -> UC</text>
+    <path d="M 398 146 C 290 84, 186 70, 152 80" fill="none" stroke="#78a6ff" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
+    <text x="255" y="86" fill="#78a6ff" font-size="9">pc_next / wr_en_pc</text>
+  </svg>
+</div>
+
+<h2 class="section-title">3 · Formato das instruções</h2>
+<p>
+  Todas as instruções têm 15 bits. Os campos mudam de significado conforme o opcode:
+  registradores para operações de ULA e memória, constante de 5 bits para <code>LD</code>/<code>SUBI</code>,
+  ou endereço para branches e <code>DJNZ</code>.
+</p>
+
+<div class="instr-bits">
+  <div class="bit b-op"><b>[14:11] opcode</b><span>4 bits</span></div>
+  <div class="bit b-rd"><b>[10:8] Rd</b><span>destino / endereco</span></div>
+  <div class="bit b-r1"><b>[7:5] Rs1</b><span>fonte 1 / dado</span></div>
+  <div class="bit b-r2"><b>[4:2] Rs2</b><span>fonte 2</span></div>
+  <div class="bit b-ct"><b>[4:0] cte5</b><span>constante / parte do endereco</span></div>
+</div>
+
+<table>
+  <tr><th>Opcode</th><th>Instrução</th><th>Efeito</th></tr>
+  <tr><td class="mono">0000</td><td class="mono">NOP</td><td>Não altera estado lógico relevante.</td></tr>
+  <tr><td class="mono">0001</td><td class="mono">LD Rd, cte5</td><td>Carrega constante imediata no registrador.</td></tr>
+  <tr><td class="mono">0010</td><td class="mono">ADD Rd, Rs1, Rs2</td><td>Soma duas fontes e grava em <code>Rd</code>.</td></tr>
+  <tr><td class="mono">0011</td><td class="mono">SUBI Rd, Rs1, cte5</td><td>Subtrai constante com extensão de sinal.</td></tr>
+  <tr><td class="mono">0100</td><td class="mono">MOV Rd, Rs1</td><td>Copia valor entre registradores.</td></tr>
+  <tr><td class="mono">0101 / 0110</td><td class="mono">BLE / BCC addr</td><td>Branches absolutos baseados em flags registradas.</td></tr>
+  <tr><td class="mono">0111 / 1000</td><td class="mono">SW / LW</td><td>Escreve na RAM ou lê da RAM.</td></tr>
+  <tr><td class="mono">1001</td><td class="mono">DJNZ Rd, addr</td><td>Decrementa <code>Rd</code> e salta se o resultado não for zero.</td></tr>
+  <tr><td class="mono">1111</td><td class="mono">JMP offset</td><td>Salto relativo em complemento de 2.</td></tr>
+</table>
+
+<h2 class="section-title">4 · Programa do crivo</h2>
+<p>
+  O programa usa registradores fixos para simplificar a validação. <code>R0</code> vale 1,
+  <code>R7</code> vale 0, <code>R6</code> aponta para a RAM, <code>R5</code> conta loops com
+  <code>DJNZ</code>, e <code>R1</code> recebe o valor lido no final.
+</p>
+
+<div class="flow">
+  <div class="flow-step"><b>Setup</b><span>R0=1, R7=0, R6=2, R5=31.</span></div>
+  <div class="flow-step"><b>Preencher</b><span>RAM[2..32] recebe o próprio índice.</span></div>
+  <div class="flow-step"><b>Marcar</b><span>Múltiplos de 2, 3 e 5 viram zero.</span></div>
+  <div class="flow-step"><b>Ler</b><span>LW copia RAM[R6] para R1.</span></div>
+  <div class="flow-step"><b>Exibir</b><span>ADD R1,R1,R7 coloca R1 em ula_out.</span></div>
+</div>
+
+<pre><span class="cm">; trecho final da ROM - fase de leitura</span>
+<span class="num">48</span>: LD   R6, <span class="num">2</span>       <span class="cm">; ponteiro inicial da tabela</span>
+<span class="num">49</span>: LD   R5, <span class="num">31</span>      <span class="cm">; quantidade de endereços lidos: 2..32</span>
+<span class="num">50</span>: LW   R1, R6      <span class="cm">; R1 = RAM[R6]</span>
+<span class="num">51</span>: ADD  R1, R1, R7  <span class="cm">; R7=0, então ula_out mostra R1</span>
+<span class="num">52</span>: ADD  R6, R6, R0  <span class="cm">; próximo endereço</span>
+<span class="num">53</span>: DJNZ R5, <span class="num">50</span>      <span class="cm">; repete enquanto R5 != 0</span>
+<span class="num">54</span>: JMP  -<span class="num">1</span>          <span class="cm">; fim: loop infinito</span></pre>
+
+<h2 class="section-title">5 · Por que q_r1 mostra a sequência certa</h2>
+<p>
+  Na fase final, o valor que interessa sai da RAM e entra em <code>R1</code>. O caminho é:
+  <code>RAM[R6] -> ram_out_s -> data_wr_s -> banco_regs.R1</code>. A UC ativa
+  <code>wr_en_reg_o</code> no estado de execute da instrução <code>LW</code>, então o valor aparece em
+  <code>q_r1</code> depois da borda de clock.
+</p>
+
+<div class="panel ram">
+  <h4>Por que fica zero por tanto tempo?</h4>
+  <p>
+    Antes da leitura final, <code>R1</code> quase não é usado; ele permanece em zero durante
+    todo o preenchimento e a marcação da RAM. Depois, na fase de leitura, os compostos
+    consecutivos também aparecem como zero porque a RAM foi zerada nesses endereços.
+  </p>
+</div>
+
+<h3>Intervalo entre valores</h3>
+<p>
+  A máquina de estados roda <code>00 -> 01 -> 10</code>, então cada instrução custa 3 ciclos.
+  Uma iteração do loop de leitura executa <code>LW</code>, <code>ADD</code>, <code>ADD</code> e
+  <code>DJNZ</code>. Quando o <code>DJNZ</code> salta, ainda há a bolha de flush para descartar a
+  instrução buscada no caminho errado. Por isso um novo valor útil aparece a cada
+  aproximadamente <strong>15 ciclos</strong>. Com período de 100 ns, isso dá cerca de
+  <strong>1,5 us</strong> por posição lida.
+</p>
+
+<div class="wave-panel">
+  <div class="wave" aria-label="Linha de tempo simplificada do loop de leitura">
+    <div class="label">fase</div><div>LW</div><div>LW</div><div>LW</div><div>ADD</div><div>ADD</div><div>ADD</div><div>ADD</div><div>ADD</div><div>ADD</div><div>DJNZ</div><div>DJNZ</div><div>DJNZ</div><div>flush</div><div>NOP</div><div>prox.</div>
+    <div class="label">estado</div><div class="state">00</div><div class="state">01</div><div class="state">10</div><div class="state">00</div><div class="state">01</div><div class="state">10</div><div class="state">00</div><div class="state">01</div><div class="state">10</div><div class="state">00</div><div class="state">01</div><div class="state">10</div><div class="state">00</div><div class="state">01</div><div class="state">10</div>
+    <div class="label">q_r1</div><div class="zero">ant.</div><div class="zero">ant.</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="hit">novo</div><div class="zero">...</div>
+    <div class="label">PC</div><div class="pc">50</div><div class="pc">51</div><div class="pc">51</div><div class="pc">51</div><div class="pc">52</div><div class="pc">52</div><div class="pc">52</div><div class="pc">53</div><div class="pc">53</div><div class="pc">53</div><div class="pc">54</div><div class="pc">54</div><div class="pc">49</div><div class="pc">49</div><div class="pc">50</div>
+  </div>
+</div>
+
+<div class="panel ctrl">
+  <h4>Hexadecimal no GTKWave</h4>
+  <p>
+    O GTKWave costuma mostrar vetores em hexadecimal. Então <code>pc_o = 31</code> na tela
+    significa <code>0x31 = 49</code> em decimal. O loop que aparece como
+    <code>31, 32, 33, 34, 35, 36</code> é, na verdade, o loop decimal
+    <code>49, 50, 51, 52, 53, 54</code>.
+  </p>
+</div>
+
+<h2 class="section-title">6 · Como o DJNZ funciona</h2>
+<p>
+  O <code>DJNZ</code> foi implementado de forma direta: ele lê o registrador <code>Rd</code>,
+  manda a ULA subtrair 1, grava o resultado de volta em <code>Rd</code> e decide o salto usando
+  a Zero flag resultante.
+</p>
+
+<pre><span class="cm">-- ideia do caminho de dados</span>
+<span class="sig">djnz_cte_s</span>  &lt;= <span class="str">"0000000000000001"</span>;
+<span class="sig">mux_b_s</span>     &lt;= djnz_cte_s <span class="kw">when</span> djnz_dec_s = <span class="str">'1'</span> <span class="kw">else</span> ...;
+<span class="sig">ula_op_o</span>   &lt;= <span class="str">"01"</span>; <span class="cm">-- SUB</span>
+<span class="sig">wr_en_reg</span>  &lt;= <span class="str">'1'</span>;  <span class="cm">-- grava Rd decrementado</span>
+<span class="sig">wr_en_flag</span> &lt;= <span class="str">'1'</span>;  <span class="cm">-- guarda flag_z para o flush</span></pre>
+
+<p>
+  Há um detalhe importante: no ciclo de execute, a UC usa <code>ula_zero_i</code> para decidir
+  se deve escrever o novo PC. No ciclo seguinte, durante o fetch/flush, ela usa
+  <code>flag_z_i</code>, porque a flag já foi registrada e o banco de registradores já mudou.
+  Isso evita que o flush seja decidido com o valor errado.
+</p>
+
+<h2 class="section-title">7 · Memória: SW e LW</h2>
+<p>
+  A RAM tem 128 posições de 16 bits. No <code>SW</code>, o endereço vem de um registrador e o dado
+  vem de outro. No <code>LW</code>, o endereço vem de um registrador e o valor lido volta para o
+  banco de registradores.
+</p>
+
+<table>
+  <tr><th>Instrução</th><th>Endereço usado</th><th>Dado</th><th>Uso no crivo</th></tr>
+  <tr>
+    <td class="mono">SW R6, R6</td>
+    <td class="mono">R6</td>
+    <td class="mono">R6</td>
+    <td>Preenche <code>RAM[n] = n</code>.</td>
+  </tr>
+  <tr>
+    <td class="mono">SW R6, R7</td>
+    <td class="mono">R6</td>
+    <td class="mono">R7 = 0</td>
+    <td>Zera um número composto.</td>
+  </tr>
+  <tr>
+    <td class="mono">LW R1, R6</td>
+    <td class="mono">R6</td>
+    <td class="mono">RAM[R6]</td>
+    <td>Lê a tabela pronta para exibir em <code>R1</code>.</td>
+  </tr>
+</table>
+
+<h2 class="section-title">8 · Sinais para verificar no GTKWave</h2>
+<p>
+  Para a apresentação no laboratório, a melhor janela é de aproximadamente <code>50 us</code>
+  até <code>98 us</code>. É ali que a fase de leitura mostra os primos e os zeros.
+</p>
+
+<div class="checklist">
+  <div class="check"><code>clk</code> e <code>rst</code></div>
+  <div class="check"><code>estado_o[1:0]</code></div>
+  <div class="check"><code>pc_o[6:0]</code></div>
+  <div class="check"><code>instr_o[14:0]</code></div>
+  <div class="check"><code>ula_out_o[15:0]</code></div>
+  <div class="check"><code>exception_o</code></div>
+  <div class="check"><code>q_r1[15:0]</code></div>
+  <div class="check"><code>q_r5[15:0]</code></div>
+  <div class="check"><code>q_r6[15:0]</code></div>
+  <div class="check"><code>flag_z_s</code> e <code>ula_z_s</code></div>
+  <div class="check"><code>djnz_dec_s</code></div>
+  <div class="check"><code>wr_en_reg_s</code> e <code>wr_en_ram_s</code></div>
+</div>
+
+<div class="panel">
+  <h4>Leitura correta da imagem do GTKWave</h4>
+  <p>
+    Se <code>pc_o</code> parece ficar em <code>31..36</code>, troque o formato para unsigned decimal.
+    Esses valores estão em hexadecimal e correspondem aos endereços decimais
+    <code>49..54</code>, exatamente o loop final de leitura.
+  </p>
+</div>
+
+<h2 class="section-title">9 · Itens sorteados para validação</h2>
+<table>
+  <tr><th>Item sorteado</th><th>Status na entrega</th><th>Onde aparece</th></tr>
+  <tr>
+    <td class="mono">Loop com DJNZ</td>
+    <td><span class="ok">Escolhido</span></td>
+    <td>Opcode <code>1001</code>, usado nos loops de preenchimento e leitura.</td>
+  </tr>
+  <tr>
+    <td class="mono">Exceção endereço inválido ROM</td>
+    <td><span class="ok">Escolhido</span></td>
+    <td>Saída <code>exception_o</code> no top level, controlada pela UC.</td>
+  </tr>
+  <tr>
+    <td class="mono">Bus debug divisor de 983</td>
+    <td><span class="warn">Não escolhido</span></td>
+    <td>O PDF permite implementar dois dos três itens sorteados.</td>
+  </tr>
+</table>
+
+<h2 class="section-title">10 · Checklist de instruções</h2>
+<p>
+  Este é o programa assembly curto que pode ser usado como referência para conferir a execução
+  de todas as instruções implementadas ao longo do semestre.
+</p>
+
+<pre><span class="cm">; checklist manual da ISA do grupo</span>
+NOP
+LD   R0, <span class="num">1</span>        <span class="cm">; constante</span>
+LD   R1, <span class="num">5</span>
+LD   R2, <span class="num">3</span>
+ADD  R3, R1, R2   <span class="cm">; R3 = 8</span>
+SUBI R4, R3, <span class="num">1</span>    <span class="cm">; R4 = 7, atualiza flags</span>
+MOV  R5, R4       <span class="cm">; R5 = 7</span>
+SW   R5, R3       <span class="cm">; RAM[7] = 8</span>
+LW   R6, R5       <span class="cm">; R6 = RAM[7] = 8</span>
+SUBI R6, R6, <span class="num">8</span>    <span class="cm">; R6 = 0, Z=1</span>
+BLE  label_ble    <span class="cm">; branch condicional</span>
+BCC  label_bcc    <span class="cm">; branch condicional</span>
+LD   R7, <span class="num">3</span>
+loop:
+DJNZ R7, loop     <span class="cm">; decrementa ate zero</span>
+JMP  -<span class="num">1</span>          <span class="cm">; fim</span></pre>
+
+<h2 class="section-title">11 · Como compilar e abrir a onda</h2>
+<pre><span class="cm"># Dentro de LAB8</span>
+make simulate
+
+<span class="cm"># Abre a wave gerada pelo Makefile</span>
+gtkwave result_proc.ghw &amp;
+
+<span class="cm"># Dica no GTKWave:</span>
+<span class="cm"># clique com botao direito nos vetores -> Data Format -> Unsigned Decimal</span></pre>
+
+<table>
+  <tr><th>Verificação</th><th>Esperado</th></tr>
+  <tr><td>Simulação GHDL</td><td><span class="ok">Sem assert failure</span></td></tr>
+  <tr><td>Fim do preenchimento</td><td><code>PC</code> passa do loop inicial de <code>DJNZ</code>.</td></tr>
+  <tr><td>Fase de leitura</td><td><code>q_r1</code> mostra primos e zeros dos compostos.</td></tr>
+  <tr><td>Loop final</td><td><code>JMP -1</code> mantém o processador no fim do programa.</td></tr>
+</table>
+
+</main>
+
+<footer class="footer">
+  LAB8 · Microprocessador com RAM, DJNZ e crivo de Eratóstenes · UTFPR · Arquitetura de Computadores<br>
+  Sinais principais: pc_o · estado_o · instr_o · q_r1 · q_r5 · q_r6 · ula_out_o · exception_o
+</footer>
+
+</body>
+</html>
