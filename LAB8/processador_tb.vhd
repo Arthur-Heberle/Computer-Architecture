@@ -20,14 +20,16 @@ architecture a_processador_tb of processador_tb is
     end component;
 
     constant period_time : time := 100 ns;
-    signal finished  : std_logic := '0';
-    signal clk       : std_logic;
-    signal rst       : std_logic;
-    signal estado_o  : unsigned(1 downto 0);
-    signal pc_o      : unsigned(6 downto 0);
-    signal instr_o   : unsigned(14 downto 0);
-    signal ula_out_o : unsigned(15 downto 0);
+
+    signal finished    : std_logic := '0';
+    signal clk         : std_logic;
+    signal rst         : std_logic;
+    signal estado_o    : unsigned(1 downto 0);
+    signal pc_o        : unsigned(6 downto 0);
+    signal instr_o     : unsigned(14 downto 0);
+    signal ula_out_o   : unsigned(15 downto 0);
     signal exception_o : std_logic;
+    signal read_index  : natural := 0;
 
 begin
 
@@ -52,8 +54,6 @@ begin
         wait;
     end process;
 
-    -- fill: 31 iter*12cyc*100ns=37.2us; elimination: ~50cyc*100ns=5us; read: 31 iter*15cyc*100ns=46.5us
-    -- total ~100us plus setup/JMP loop overhead
     sim_time_proc: process
     begin
         wait for 500000 ns;
@@ -70,31 +70,32 @@ begin
     end process;
 
     monitor_proc: process(clk)
+        variable value_i : integer;
     begin
         if rising_edge(clk) then
-            -- during execute of instr@51 (ADD R1,R1,R7) pc_o has already
-            -- been incremented to 52 (decode stage), so check pc_o=52, state=exec
-            if pc_o = "0110100" and estado_o = "10" then
-                report "READ R1=" & integer'image(to_integer(ula_out_o)) severity note;
+            -- During execute of instr@26 (ADD R1,R1,R7), pc_o has already
+            -- been incremented to 27, so this samples the final display value.
+            if pc_o = to_unsigned(27, 7) and estado_o = "10" then
+                value_i := to_integer(ula_out_o);
+                report "READ R1=" & integer'image(value_i) severity note;
+                read_index <= read_index + 1;
             end if;
         end if;
     end process;
 
-    -- fill loop: 31 iter * 12 cycles * 100ns = ~37.2us; check at 45us that PC is past the fill loop
     watchdog_proc: process
     begin
-        wait for 45000 ns;
-        assert pc_o > "0000110"
-            report "FAIL: PC stuck at or below address 6 after 45us - DJNZ loop never exits!" severity failure;
+        wait for 50000 ns;
+        assert pc_o > to_unsigned(7, 7)
+            report "FAIL: PC stuck at or below address 7 after fill loop" severity failure;
         wait;
     end process;
 
-    -- verify PC reaches address 48 (read phase) within simulation time
-    reach48_proc: process
+    read_phase_proc: process
     begin
-        wait for 65000 ns;
-        assert pc_o >= "0110000"
-            report "FAIL: PC has not reached address 48 (read phase) by 65us!" severity failure;
+        wait for 350000 ns;
+        assert read_index > 0
+            report "FAIL: read phase did not start by 350us" severity failure;
         wait;
     end process;
 

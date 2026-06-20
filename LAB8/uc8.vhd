@@ -58,6 +58,7 @@ architecture a_uc8 of uc8 is
     signal is_sw_s        : std_logic;
     signal is_lw_s        : std_logic;
     signal is_djnz_s      : std_logic;
+    signal is_bez_s       : std_logic;
     signal branch_taken_s : std_logic;
     signal pc_8b_s        : unsigned(7 downto 0);
     signal exception_s    : std_logic;
@@ -70,6 +71,7 @@ begin
         estado => estado_s
     );
 
+    -- separa os campos da instrucao atual
     opcode_s   <= instr_i(14 downto 11);
     rd_s       <= instr_i(10 downto 8);
     rs1_s      <= instr_i(7 downto 5);
@@ -77,6 +79,7 @@ begin
     offset_s   <= instr_i(6 downto 0);
     addr_abs_s <= instr_i(6 downto 0);
 
+    -- um sinal '1' para cada opcode (decodificacao)
     is_ld_s   <= '1' when opcode_s = "0001" else '0';
     is_add_s  <= '1' when opcode_s = "0010" else '0';
     is_subi_s <= '1' when opcode_s = "0011" else '0';
@@ -86,8 +89,10 @@ begin
     is_sw_s   <= '1' when opcode_s = "0111" else '0';
     is_lw_s   <= '1' when opcode_s = "1000" else '0';
     is_djnz_s <= '1' when opcode_s = "1001" else '0';
+    is_bez_s  <= '1' when opcode_s = "1010" else '0';
     is_jmp_s  <= '1' when opcode_s = "1111" else '0';
 
+    -- desvio condicional tomado: BLE ou BCC com a flag ativa
     branch_taken_s <= '1' when (is_ble_s = '1' and flag_ble_i = '1') else
                       '1' when (is_bcc_s = '1' and flag_bcc_i = '1') else
                       '0';
@@ -105,50 +110,70 @@ begin
     flush_o <= '1' when (estado_s = "00" and is_jmp_s      = '1') else
                '1' when (estado_s = "00" and branch_taken_s = '1') else
                '1' when (estado_s = "00" and is_djnz_s = '1' and flag_z_i = '0') else
+               '1' when (estado_s = "00" and is_bez_s = '1' and ula_zero_i = '1') else
                '0';
 
+    -- carrega o IR no fetch
     wr_en_ir_o <= '1' when estado_s = "00" else '0';
 
+    -- atualiza o PC: sempre no decode; no execute so nos desvios tomados
+    -- (excecao trava o PC). BEZ salta quando o registrador lido eh zero.
     wr_en_pc_o <= '0' when (exception_s = '1' and estado_s = "01") else
                   '1' when estado_s = "01" else
                   '1' when (estado_s = "10" and is_jmp_s      = '1') else
                   '1' when (estado_s = "10" and branch_taken_s = '1') else
                   '1' when (estado_s = "10" and is_djnz_s = '1' and ula_zero_i = '0') else
+                  '1' when (estado_s = "10" and is_bez_s = '1' and ula_zero_i = '1') else
                   '0';
 
+    -- valor do proximo PC (incremento, JMP relativo ou desvio absoluto addr-1)
     pc_next_o <= (pc_i + 1)            when estado_s = "01" else
                  (pc_i + offset_s - 1) when (estado_s = "10" and is_jmp_s      = '1') else
                  (addr_abs_s - 1)      when (estado_s = "10" and branch_taken_s = '1') else
                  (addr_abs_s - 1)      when (estado_s = "10" and is_djnz_s = '1' and ula_zero_i = '0') else
+                 (addr_abs_s - 1)      when (estado_s = "10" and is_bez_s = '1' and ula_zero_i = '1') else
                  pc_i;
 
+    -- grava as flags (so ADD, SUBI e DJNZ atualizam)
     wr_en_flag_o <= '1' when (estado_s = "10" and
                               (is_add_s = '1' or is_subi_s = '1' or
                                is_djnz_s = '1')) else '0';
 
+    -- habilita escrita no banco de registradores
     wr_en_reg_o <= '1' when (estado_s = "10" and
                              (is_ld_s = '1' or is_add_s = '1' or
                               is_subi_s = '1' or is_mov_s = '1' or
                               is_lw_s = '1' or is_djnz_s = '1')) else '0';
 
+    -- habilita escrita na RAM (so no SW)
     wr_en_ram_o <= '1' when (estado_s = "10" and is_sw_s = '1') else '0';
 
+    -- registrador destino da escrita
     reg_wr_o <= rd_s;
 
-    reg_r1_o <= rd_s  when (is_sw_s = '1' or is_djnz_s = '1') else rs1_s;
-    reg_r2_o <= rs1_s when is_sw_s = '1' else rs2_s;
+    -- registradores lidos do banco (portas r1 e r2)
+    -- no BEZ, r2 = R7 (=0) para comparar o registrador com zero
+    reg_r1_o <= rd_s  when (is_sw_s = '1' or is_djnz_s = '1' or is_bez_s = '1') else rs1_s;
+    reg_r2_o <= rs1_s when is_sw_s = '1' else
+                "111" when is_bez_s = '1' else
+                rs2_s;
 
+    -- mux do operando B da ULA (0 = registrador, 1 = constante)
     sel_b_o  <= '1' when (is_subi_s = '1' or is_djnz_s = '1') else '0';
 
+    -- mux do dado escrito no banco (ULA, cte, registrador ou RAM)
     sel_wr_o <= "01" when is_ld_s  = '1' else
                 "10" when is_mov_s = '1' else
                 "11" when is_lw_s  = '1' else
                 "00";
 
+    -- operacao da ULA (00 = soma, 01 = subtrai)
     ula_op_o <= "01" when (is_subi_s = '1' or is_djnz_s = '1') else "00";
 
+    -- no DJNZ a ULA subtrai 1 do registrador
     djnz_dec_o <= is_djnz_s;
 
+    -- estado atual para o resto do processador
     estado_o <= estado_s;
 
 end architecture;
